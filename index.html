@@ -17,6 +17,8 @@ header{display:flex;align-items:center;gap:12px;padding:14px clamp(12px,3vw,28px
 h1{flex:1;margin:0;font:500 clamp(1.05rem,2.6vw,1.7rem) Fraunces,Georgia,serif}
 .nav{display:flex;gap:6px}
 .nav button,.ic{min-width:42px;height:42px;border:1px solid var(--line);background:var(--paper);border-radius:21px;padding:0 14px}
+.pickwrap{position:relative}
+#jump{position:absolute;left:0;bottom:0;width:100%;height:1px;opacity:0;pointer-events:none;border:0;padding:0}
 main{flex:1;display:grid;place-items:center;padding:0 12px 18px}
 .dial{position:relative;width:min(96vw,calc(100dvh - 96px),880px);aspect-ratio:1;container-type:inline-size}
 .dial::before{content:"";position:absolute;inset:1.3%;border-radius:50%;background:var(--paper);box-shadow:0 24px 60px rgba(18,35,43,.14),0 2px 6px rgba(18,35,43,.08)}
@@ -94,6 +96,7 @@ body.has-sel .fab{display:none}}
     <button id="next" aria-label="Next day">›</button>
   </div>
   <h1 id="dateTxt" aria-live="polite"></h1>
+  <span class="pickwrap"><button id="pick" class="ic" aria-label="Go to a date">Go to date</button><input type="date" id="jump" tabindex="-1" aria-label="Choose a date"></span>
   <button id="dataBtn" class="ic" aria-label="Export or import data">Data</button>
 </header>
 <main>
@@ -291,6 +294,9 @@ function tick(){
 const go=n=>{view=addD(view,n);sel=null;render()};
 $('#prev').onclick=()=>go(-1);$('#next').onclick=()=>go(1);
 $('#today').onclick=()=>{view=todayStr();sel=null;render()};
+const jump=$('#jump');
+$('#pick').onclick=()=>{jump.value=view;try{jump.showPicker()}catch{jump.focus();jump.click()}};
+jump.onchange=()=>{if(RD.test(jump.value)){view=jump.value;sel=null;render()}};
 
 /* ============ Floating + menu ============ */
 const fab=$('#fab'),bubs=$('#bubs');
