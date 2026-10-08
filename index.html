@@ -6,18 +6,21 @@
 <meta name="theme-color" content="#E7ECEE">
 <title>Time Dial</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Instrument+Sans:wght@400;500;600;700&display=swap"></noscript>
 <style>
 :root{--bg:#E7ECEE;--paper:#F7F9F9;--ink:#12232B;--mute:#566A72;--line:#BFCCD1;--ev:#0B6E78;--tk:#3340B8;--ch:#9A5B07;--hb:#7C3A92;--now:#D3341C;font:16px/1.4 "Instrument Sans",system-ui,sans-serif}
 *{box-sizing:border-box}[hidden]{display:none!important}
 body{margin:0;min-height:100dvh;background:var(--bg);color:var(--ink);display:flex;flex-direction:column}
 button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}
 :focus-visible{outline:3px solid var(--tk);outline-offset:2px}
-header{display:flex;align-items:center;gap:12px;padding:14px clamp(12px,3vw,28px)}
-h1{flex:1;margin:0;font:500 clamp(1.05rem,2.6vw,1.7rem) Fraunces,Georgia,serif}
-.nav{display:flex;gap:6px}
-.nav button,.ic{min-width:42px;height:42px;border:1px solid var(--line);background:var(--paper);border-radius:21px;padding:0 14px}
-.pickwrap{position:relative}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px clamp(12px,3vw,28px)}
+h1{flex:1;min-width:0;margin:0;font:500 clamp(1.05rem,2.6vw,1.7rem) Fraunces,Georgia,serif}
+.nav{display:flex;gap:6px;flex:none}
+.nav button,.ic{min-width:42px;height:42px;border:1px solid var(--line);background:var(--paper);border-radius:21px;padding:0 14px;white-space:nowrap;flex:none}
+.pickwrap{position:relative;flex:none}
+#pick{white-space:nowrap}
 #jump{position:absolute;left:0;bottom:0;width:100%;height:1px;opacity:0;pointer-events:none;border:0;padding:0}
 main{flex:1;display:grid;place-items:center;padding:0 12px 18px}
 .dial{position:relative;width:min(96vw,calc(100dvh - 96px),880px);aspect-ratio:1;container-type:inline-size}
@@ -82,6 +85,10 @@ fieldset.days{border:1px solid var(--line);border-radius:12px;display:flex;flex-
 #toast{position:fixed;left:50%;bottom:96px;transform:translate(-50%,10px);background:var(--ink);color:#fff;border-radius:999px;padding:8px 18px;opacity:0;pointer-events:none;transition:.25s;z-index:9}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 @media(max-width:640px){
+header{gap:8px 10px}
+h1{order:-1;flex:1 0 100%;text-align:center}
+.nav button,.ic{padding:0 10px}
+.dial{width:min(96vw,calc(100dvh - 140px),880px)}
 .lb.mn{display:none}.lb.mj{font-size:22px}.grid{grid-template-columns:1fr}
 .center.panel{position:fixed;left:8px;right:8px;bottom:8px;top:auto;transform:none;width:auto;max-height:55dvh;font-size:.95rem;z-index:6}
 body.has-sel .fab{display:none}}
@@ -127,7 +134,7 @@ const pd=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
 const addD=(s,n)=>{const d=pd(s);d.setDate(d.getDate()+n);return ymd(d)};
 const dayDiff=(a,b)=>{const x=pd(a),y=pd(b);return Math.round((Date.UTC(y.getFullYear(),y.getMonth(),y.getDate())-Date.UTC(x.getFullYear(),x.getMonth(),x.getDate()))/864e5)};
 const tm=s=>{const[h,m]=s.split(':').map(Number);return h*60+m};
-const fm=m=>`${pad(Math.floor(m/60))}:${pad(Math.round(m)%60)}`;
+const fm=m=>{m=Math.round(m);return`${pad(Math.floor(m/60))}:${pad(m%60)}`};
 const nowMin=()=>{const d=new Date();return d.getHours()*60+d.getMinutes()+d.getSeconds()/60};
 const todayStr=()=>ymd(new Date());
 const pl=(n,w)=>`${n} ${w}${n===1?'':'s'}`;
@@ -227,7 +234,7 @@ function dial(list){
   if(isToday)g.push(el('path',{id:'prog',d:arc(244,0,Math.max(.1,ang(nowMin())))}));
   // event lanes
   const lanes=[],laneOf={};
-  list.filter(i=>i.k==='event').forEach(e=>{let l=lanes.findIndex(end=>end<=e.t);if(l<0){l=lanes.length<3?lanes.length:e.t%3}lanes[l]=e.t+e.dur;laneOf[e.id]=l});
+  list.filter(i=>i.k==='event').forEach(e=>{let l=lanes.findIndex(end=>end<=e.t);if(l<0){l=lanes.length<3?lanes.length:lanes.indexOf(Math.min(...lanes))}lanes[l]=e.t+e.dur;laneOf[e.id]=l});
   const placed=[];
   list.forEach(i=>{
     const isSel=sel&&sel.k===i.k&&sel.id===i.id,cls=`it k-${i.k}${i.done?' done':''}${isSel?' sel':''}`;
@@ -271,7 +278,8 @@ function panel(c,s){
   if(k==='habit'){const st=streaks(o);lines.push(`${fm(s.t)}, ${repText(o)}`,`Current streak ${pl(st.cur,'day')}, best ${pl(st.best,'day')}`)}
   o.notes&&lines.push(o.notes);
   const list=k==='chore'&&o.items.length?el('div',{},o.items.map((it,i)=>el('label',{class:'ck'+(it.done?' dn':'')},el('input',{type:'checkbox',checked:it.done,onchange:ev=>{it.done=ev.target.checked;o.done=o.items.every(x=>x.done);save();render();$('#center').querySelectorAll('input')[i]?.focus()}}),el('span',{},it.t)))):null;
-  c.append(el('div',{class:'kind'},KIND[k]),el('h2',{class:s.done?'dn':''},s.title),lines.map(l=>el('p',{},l)),list,
+  c.append(el('div',{class:'kind'},KIND[k]),el('h2',{class:s.done?'dn':''},s.title),
+    ...lines.map(l=>el('p',{},l)),...(list?[list]:[]),
     el('div',{class:'btns'},
       el('button',{class:'btn pri',onclick:()=>{toggle(s);render()}},s.done?'Undo':'Done'),
       k==='task'&&!o.done&&el('button',{class:'btn',onclick:()=>{defer(o);sel=o.date===view?sel:null;render()}},'Defer'),
