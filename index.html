@@ -267,9 +267,9 @@ function trainD(N,rp,shape,holes){
     d.push('a'+hr.toFixed(2)+' '+hr.toFixed(2)+' 0 1 0 '+(2*hr).toFixed(2)+',0');
     d.push('a'+hr.toFixed(2)+' '+hr.toFixed(2)+' 0 1 0 '+(-2*hr).toFixed(2)+',0Z')}
   return d.join('')}
-const ORDER=[['escape','wheel','url(#gB2)'],['sec','wheel','url(#gE)'],['escape','pin','url(#gS)'],
-  ['thr','wheel','url(#gC)'],['sec','pin','url(#gS)'],['min','wheel','url(#gH)'],
-  ['thr','pin','url(#gS)'],['hr','wheel','url(#gT)'],['min','pin','url(#gS)']];
+const ORDER=[['hr','wheel','url(#gT)'],['min','wheel','url(#gH)'],['thr','wheel','url(#gC)'],
+  ['sec','wheel','url(#gE)'],['escape','wheel','url(#gB2)'],['escape','pin','url(#gS)'],
+  ['sec','pin','url(#gS)'],['thr','pin','url(#gS)'],['min','pin','url(#gS)']];
 function makeTrain(){
   const G=el('g',{id:'train','aria-hidden':'true'}),defs=el('defs'),tf=el('g',{id:'tf'});
   G.append(defs,tf);
