@@ -27,6 +27,16 @@ main{flex:1;display:grid;place-items:center;padding:0 12px 18px}
 .dial::before{content:"";position:absolute;inset:1.3%;border-radius:50%;background:var(--paper);box-shadow:0 24px 60px rgba(18,35,43,.14),0 2px 6px rgba(18,35,43,.08)}
 .dial::after{content:"";position:absolute;inset:25%;border-radius:50%;background:var(--bg);box-shadow:inset 0 8px 22px rgba(18,35,43,.12)}
 #dial{position:relative;z-index:1;width:100%;height:100%;display:block}
+.center:not(.panel){width:34%;padding:.7em .9em;background:rgba(247,249,249,.8);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(191,204,209,.7);border-radius:22px;box-shadow:0 6px 18px rgba(18,35,43,.1)}
+#train{filter:drop-shadow(0 4px 3px rgba(18,35,43,.28))}
+.halo{fill:var(--bg);stroke:var(--bg);stroke-width:7;stroke-linejoin:round;stroke-linecap:round}
+.body{stroke:#8A631E;stroke-width:1.1;stroke-opacity:.5;stroke-linejoin:round}
+.body.st{stroke:#1F262C;stroke-opacity:.6}
+.spin{animation-fill-mode:both;transform:rotate(var(--ph))}
+@keyframes spin{from{transform:rotate(var(--ph))}to{transform:rotate(calc(var(--ph) + 360deg))}}
+@keyframes spinr{from{transform:rotate(var(--ph))}to{transform:rotate(calc(var(--ph) - 360deg))}}
+.beat{transform-box:fill-box;transform-origin:center;animation:beat 1s cubic-bezier(.2,.85,.3,1) infinite}
+@keyframes beat{0%,55%,100%{transform:scale(1);opacity:1}14%{transform:scale(1.5);opacity:.5}}
 .hole{fill:none;stroke:var(--line);stroke-dasharray:2 6}
 .night{fill:none;stroke:var(--line);stroke-width:4;stroke-linecap:round}
 .tk{stroke:var(--mute);stroke-width:1;opacity:.5}.tk.maj{stroke-width:1.8;opacity:.9}
@@ -85,6 +95,7 @@ fieldset.days{border:1px solid var(--line);border-radius:12px;display:flex;flex-
 #toast{position:fixed;left:50%;bottom:96px;transform:translate(-50%,10px);background:var(--ink);color:#fff;border-radius:999px;padding:8px 18px;opacity:0;pointer-events:none;transition:.25s;z-index:9}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 @media(max-width:640px){
+.center:not(.panel){width:46%}
 header{gap:8px 10px}
 h1{order:-1;flex:1 0 100%;text-align:center}
 .nav button,.ic{padding:0 10px}
@@ -123,7 +134,7 @@ body.has-sel .fab{display:none}}
 
 <script>
 /* ============ Utilities ============ */
-const NS='http://www.w3.org/2000/svg',SVGT=/^(svg|g|path|circle|line|text|rect|title)$/;
+const NS='http://www.w3.org/2000/svg',SVGT=/^(svg|g|path|circle|line|text|rect|title|defs|radialGradient|linearGradient|stop)$/;
 const $=s=>document.querySelector(s);
 const el=(t,a={},...k)=>{const n=SVGT.test(t)?document.createElementNS(NS,t):document.createElement(t);
   for(const[x,v]of Object.entries(a)){if(v==null||v===false)continue;if(typeof v==='function')n.addEventListener(x.slice(2),v);else n.setAttribute(x,v===true?'':v)}
@@ -224,8 +235,92 @@ function icon(k){
   s.append(k==='event'?el('path',{d:'M-9 5A10 10 0 0 1 9 5',...st,'stroke-width':5,'stroke-linecap':'round'}):k==='task'?el('circle',{r:8,...st}):k==='chore'?el('rect',{x:-8,y:-8,width:16,height:16,rx:4,...st}):el('rect',{x:-7,y:-7,width:14,height:14,rx:2,transform:'rotate(45)',...st}));
   return s}
 
+
+/* ============ Movement: the gear train in the hollow ============ */
+const RAD=Math.PI/180;
+const CHAIN=[{id:'escape',teeth:30,rp:66,shape:'point',dir:1,base:30,pin:{teeth:15,rp:45}},
+  {id:'sec',teeth:30,rp:90,dir:-1,base:60,pin:{teeth:6,rp:18}},
+  {id:'thr',teeth:36,rp:108,dir:1,base:360,pin:{teeth:6,rp:18}},
+  {id:'min',teeth:60,rp:180,dir:-1,base:3600,pin:{teeth:6,rp:18}},
+  {id:'hr',teeth:72,rp:216,dir:1,base:43200,pin:null}];
+const Rg=137,g0=(180+18.2)*RAD,alf=[59.03,54.76,92.54,117.26].map(x=>x*RAD),TC=[];
+for(let i=0;i<5;i++){const a=g0+alf.slice(0,i).reduce((s,x)=>s+x,0);
+  TC.push({x:Rg*Math.sin(a),y:-Rg*Math.cos(a)})}
+const PH={escape:{wheel:0}};
+for(let i=0;i<4;i++){const th=Math.atan2(TC[i+1].y-TC[i].y,TC[i+1].x-TC[i].x)/RAD;
+  PH[CHAIN[i].id].pin=((th%360)+360)%360;
+  PH[CHAIN[i+1].id]=PH[CHAIN[i+1].id]||{};
+  PH[CHAIN[i+1].id].wheel=((th+180-180/CHAIN[i+1].teeth)%360+360)%360}
+const pol=(r,a)=>[r*Math.cos(a*RAD),r*Math.sin(a*RAD)];
+const f2=p=>p[0].toFixed(2)+','+p[1].toFixed(2);
+function trainD(N,rp,shape,holes){
+  const m=2*rp/N,rT=rp+m,rR=rp-1.25*m,st=360/N,hw=90/N*.85,hwT=hw*.62,hwR=hw*1.08,d=[];let k,a;
+  d.push('M'+f2(pol(rR,-hwR)));
+  for(k=0;k<N;k++){a=k*st;
+    if(shape==='point')d.push('L'+f2(pol(rT,a)));
+    else{d.push('L'+f2(pol(rT,a-hwT)));d.push('L'+f2(pol(rT,a+hwT)))}
+    d.push('L'+f2(pol(rR,a+hwR)));
+    d.push('A'+rR.toFixed(2)+' '+rR.toFixed(2)+' 0 0 1 '+f2(pol(rR,(k+1)*st-hwR)))}
+  d.push('Z');
+  for(k=0;k<holes;k++){const q=pol(.58*rp,45+k*360/holes),hr=.17*rp;
+    d.push('M'+(q[0]-hr).toFixed(2)+','+q[1].toFixed(2));
+    d.push('a'+hr.toFixed(2)+' '+hr.toFixed(2)+' 0 1 0 '+(2*hr).toFixed(2)+',0');
+    d.push('a'+hr.toFixed(2)+' '+hr.toFixed(2)+' 0 1 0 '+(-2*hr).toFixed(2)+',0Z')}
+  return d.join('')}
+const ORDER=[['escape','wheel','url(#gB2)'],['sec','wheel','url(#gE)'],['escape','pin','url(#gS)'],
+  ['thr','wheel','url(#gC)'],['sec','pin','url(#gS)'],['min','wheel','url(#gH)'],
+  ['thr','pin','url(#gS)'],['hr','wheel','url(#gT)'],['min','pin','url(#gS)']];
+function makeTrain(){
+  const G=el('g',{id:'train','aria-hidden':'true'}),defs=el('defs'),tf=el('g',{id:'tf'});
+  G.append(defs,tf);
+  const grad=(id,a)=>el('linearGradient',{id,x1:0,y1:0,x2:1,y2:1},a.map(s=>el('stop',{offset:s[0],'stop-color':s[1]})));
+  defs.append(grad('gB2',[['0','#D9A94E'],['.55','#BC8A34'],['1','#A0711F']]),
+    grad('gE',[['0','#17A7B4'],['.55','#0B6E78'],['1','#06464E']]),
+    grad('gC',[['0','#D69B3E'],['.55','#945A07'],['1','#6B4005']]),
+    grad('gH',[['0','#B57BC8'],['.55','#773892'],['1','#57266C']]),
+    grad('gT',[['0','#6776E8'],['.55','#3340B8'],['1','#202A7E']]),
+    grad('gS',[['0','#4E5860'],['.55','#39424A'],['1','#2A3138']]));
+  let dly=0;
+  ORDER.forEach(o=>{
+    const i=CHAIN.findIndex(g=>g.id===o[0]),pin=o[1]==='pin',g=CHAIN[i];
+    const d=trainD(pin?g.pin.teeth:g.teeth,pin?g.pin.rp:g.rp,g.shape,pin?0:4);
+    const outer=el('g',{transform:`translate(${TC[i].x.toFixed(2)},${TC[i].y.toFixed(2)})`,'data-w':g.id});
+    const spin=el('g',{class:'spin'});
+    spin.style.setProperty('--ph',PH[g.id][o[1]].toFixed(2)+'deg');
+    spin.style.animationName=g.dir>0?'spin':'spinr';
+    spin.style.animationDuration=`calc(${g.base}s / var(--sp,1))`;
+    spin.style.animationTimingFunction=`steps(${g.base})`;
+    spin.style.animationDelay=dly+'s';
+    spin.append(el('path',{d,class:'halo','fill-rule':'evenodd'}),
+      el('path',{d,class:'body'+(pin?' st':''),'fill-rule':'evenodd',fill:o[2]}));
+    outer.append(spin);tf.append(outer)});
+  TC.forEach((c,i)=>{
+    tf.append(el('circle',{cx:c.x.toFixed(2),cy:c.y.toFixed(2),r:11.5,fill:'url(#gS)',stroke:'#242B31','stroke-width':1}));
+    const j=el('circle',{cx:c.x.toFixed(2),cy:c.y.toFixed(2),r:7,fill:'#A3183B',stroke:'#700F2B','stroke-width':1.4});
+    if(!i)j.setAttribute('class','beat');
+    tf.append(j)});
+  const R0=CHAIN.map(g=>g.rp+2*g.rp/g.teeth+4);
+  let R=0;TC.forEach((c,i)=>{R=Math.max(R,Math.hypot(c.x,c.y)+R0[i])});
+  const s=232/R;
+  tf.setAttribute('transform',`translate(${C} ${C}) scale(${s.toFixed(4)})`);
+  const w=new Date().getSeconds()+new Date().getMilliseconds()/1000;
+  dly=(w-Math.ceil(w))||0;
+  tf.querySelectorAll('.spin,.beat').forEach(e=>e.style.animationDelay=dly+'s');
+  const sync=tf.querySelector('.spin');let prev='';
+  if(!matchMedia('(prefers-reduced-motion: reduce)').matches){
+    const si=setInterval(function(){
+      const cur=getComputedStyle(sync).transform;
+      if(cur!==prev){
+        if(prev!==''){
+          const f=((Date.now()/1000)%1+1)%1;
+          tf.querySelectorAll('.spin,.beat').forEach(e=>e.style.animationDelay=(parseFloat(e.style.animationDelay)-f)+'s');
+          clearInterval(si)}
+        prev=cur}
+    },40)}
+  return G}
+
 function dial(list){
-  const s=$('#dial');s.replaceChildren();
+  const s=$('#dial');if(!$('#train'))s.append(makeTrain());[...s.children].forEach(n=>n.id!=='train'&&n.remove());
   s.setAttribute('aria-label','24-hour clock for '+pd(view).toLocaleDateString());
   const g=[el('circle',{cx:C,cy:C,r:150,class:'hole'}),el('path',{d:arc(265,270,360),class:'night'}),el('path',{d:arc(265,0,90),class:'night'})];
   for(let i=0;i<48;i++){const a=i*7.5,maj=i%2===0,[x1,y1]=P(maj?247:253,a),[x2,y2]=P(260,a);g.push(el('line',{x1,y1,x2,y2,class:'tk'+(maj?' maj':'')}))}
@@ -346,7 +441,7 @@ function openForm(kind,obj){
     const sync=()=>{every.hidden=c.repeat.value!=='every';dys.hidden=c.repeat.value!=='days'};c.repeat.onchange=sync;sync()}
   $('#ftitle').textContent=`${edit?'Edit':'New'} ${kind}`;
   $('#fbody').replaceChildren(...body);
-  $('#ffoot').replaceChildren(edit&&el('button',{type:'button',class:'btn danger',onclick:()=>remove(kind,o)},'Delete'),el('button',{type:'button',class:'btn',onclick:()=>fdlg.close()},'Cancel'),el('button',{type:'submit',class:'btn pri'},'Save'));
+  $('#ffoot').replaceChildren(...[edit&&el('button',{type:'button',class:'btn danger',onclick:()=>remove(kind,o)},'Delete'),el('button',{type:'button',class:'btn',onclick:()=>fdlg.close()},'Cancel'),el('button',{type:'submit',class:'btn pri'},'Save')].filter(Boolean));
   fform.onsubmit=e=>{e.preventDefault();const g=k=>c[k].value;
     let d={title:g('title').trim(),notes:g('notes').trim()},def={};
     if(kind==='event'){d={...d,date:g('date'),start:g('start'),dur:Math.max(5,+g('dur')||60),loc:g('loc').trim()};def={done:false}}
