@@ -146,10 +146,13 @@ path.ring-foc{stroke:var(--ink);stroke-width:24;opacity:.4;stroke-dasharray:3 6;
 .bub .cnt{position:absolute;top:-5px;right:-5px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:var(--c);color:#fff;font-size:11px;font-weight:700;line-height:20px;text-align:center;box-shadow:0 2px 6px rgba(15,32,39,.28)}
 
 /* ---- Dialogs ---- */
-dialog{border:0;padding:0;border-radius:26px;width:min(520px,calc(100vw - 24px));max-height:calc(100dvh - 24px);background:rgba(248,250,250,.94);backdrop-filter:blur(14px);box-shadow:0 30px 80px rgba(15,32,39,.35);color:var(--ink)}
+dialog{position:relative;border:0;padding:0;border-radius:26px;width:min(520px,calc(100vw - 24px));max-height:calc(100dvh - 24px);background:rgba(248,250,250,.94);backdrop-filter:blur(14px);box-shadow:0 30px 80px rgba(15,32,39,.35);color:var(--ink)}
 dialog[open]{animation:pop .22s ease-out}@keyframes pop{from{transform:scale(.96);opacity:0}}
 dialog::backdrop{background:rgba(15,32,39,.28);backdrop-filter:blur(6px)}
 .sheet{padding:22px;display:grid;gap:14px}.sheet h2{margin:0;font:500 1.5rem Fraunces,Georgia,serif}
+.xclose{position:absolute;top:10px;right:10px;width:36px;height:36px;border:0;background:none;color:var(--mute);font:1.15rem/1 "Instrument Sans";border-radius:50%;display:grid;place-items:center;z-index:1;transition:background .18s var(--ease),color .18s var(--ease)}
+.xclose:hover{background:rgba(15,32,39,.08);color:var(--ink)}
+#data>.sheet>h2,#mind>.sheet>h2{padding-right:40px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .f{display:grid;gap:4px;font-size:.9rem;color:var(--mute)}.f.wide{grid-column:1/-1}
 .f input,.f select,.f textarea{border:1px solid var(--line);border-radius:12px;padding:9px 12px;background:#fff;color:var(--ink);width:100%}
@@ -206,6 +209,7 @@ body.has-sel .fab{display:none}}
 
 <dialog id="form" aria-labelledby="ftitle"><form id="fform" class="sheet"><h2 id="ftitle"></h2><div class="grid" id="fbody"></div><div class="foot" id="ffoot"></div></form></dialog>
 <dialog id="data" aria-labelledby="dtitle"><div class="sheet">
+  <button type="button" class="xclose" id="dclose" aria-label="Close">&#10005;</button>
   <h2 id="dtitle">Your data</h2>
   <p style="margin:0;color:var(--mute)">Everything is saved in this browser. Export a backup file, or import one to restore or combine data.</p>
   <div class="foot" style="justify-content:flex-start"><button class="btn pri" id="exp">Export JSON</button><button class="btn" id="impBtn">Import JSON</button><input id="imp" type="file" accept=".json,application/json" hidden></div>
@@ -217,14 +221,14 @@ body.has-sel .fab{display:none}}
     <div id="dstate" role="status" class="dstate">Disconnected. Your data stays on this device.</div>
     <div class="foot" style="justify-content:flex-start"><button class="btn pri" id="dcon">Connect to Google Drive</button><button class="btn" id="dsync" hidden>Sync now</button><button class="btn" id="ddis" hidden>Disconnect</button></div>
   </div>
-  <div class="foot"><button class="btn" id="dclose">Close</button></div>
 </div></dialog>
 <dialog id="mind" aria-labelledby="mindtitle"><div class="sheet">
+  <button type="button" class="xclose" id="mindClose" aria-label="Close">&#10005;</button>
   <h2 id="mindtitle">On my mind</h2>
   <p style="margin:0;color:var(--mute)">Quick notes with no time or category yet — turn them into plans with “Plan my day”.</p>
   <div class="mindnew"><input id="mindIn" type="text" maxlength="120" placeholder="What’s on your mind?" aria-label="New note"><button class="btn pri" id="mindAdd">Add note</button></div>
   <div id="mindList" class="clist"></div>
-  <div class="foot"><button class="btn danger" id="mindClear">Clear all</button><span style="flex:1"></span><button class="btn" id="mindClose">Close</button><button class="btn pri" id="mindPlan">Plan my day</button></div>
+  <div class="foot"><button class="btn danger" id="mindClear">Clear all</button><span style="flex:1"></span><button class="btn pri" id="mindPlan">Plan my day</button></div>
 </div></dialog>
 <dialog id="plan" aria-labelledby="plantitle"><div class="sheet" id="planbody" style="display:grid;gap:14px">
   <div style="text-align:center"><h2 id="plantitle" style="font:500 1.5rem/1.15 Fraunces,Georgia,serif;margin:0 0 2px;overflow-wrap:anywhere">Plan your day</h2></div>
