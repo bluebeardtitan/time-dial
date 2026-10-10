@@ -164,6 +164,9 @@ fieldset.days{border:1px solid var(--line);border-radius:12px;display:flex;flex-
 .catbtn{display:inline-flex;align-items:center;gap:.5em;border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:.5em 1em;font-weight:600;transition:background .18s var(--ease),border-color .18s var(--ease)}
 .catbtn:hover{background:#fff;border-color:var(--c)}
 .catbtn svg{width:1.15em;height:1.15em;flex:none}
+.sheet h3{margin:0;font:500 1.05rem/1.2 Fraunces,Georgia,serif}
+.sep{border:0;height:1px;background:var(--line-soft);margin:18px 0 12px}
+.dstate{font-size:.9rem;color:var(--mute);margin:0 0 10px;overflow-wrap:anywhere}
 #toast{position:fixed;left:50%;bottom:96px;transform:translate(-50%,10px);background:var(--ink);color:#fff;border-radius:999px;padding:8px 18px;opacity:0;pointer-events:none;transition:.25s;z-index:9}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 @media(max-width:640px){
@@ -200,6 +203,13 @@ body.has-sel .fab{display:none}}
   <p style="margin:0;color:var(--mute)">Everything is saved in this browser. Export a backup file, or import one to restore or combine data.</p>
   <div class="foot" style="justify-content:flex-start"><button class="btn pri" id="exp">Export JSON</button><button class="btn" id="impBtn">Import JSON</button><input id="imp" type="file" accept=".json,application/json" hidden></div>
   <div id="imsg" role="status"></div>
+  <hr class="sep">
+  <div id="drive">
+    <h3>Google Drive sync</h3>
+    <p style="margin:0 0 10px;color:var(--mute)">Backs up this browser’s copy to <b>MAK-Projects/Time-Dial-Sync</b> using your Google sign-in. Auto-syncs on every change; when copies differ, the one with the most recent modified time wins.</p>
+    <div id="dstate" role="status" class="dstate">Disconnected. Your data stays on this device.</div>
+    <div class="foot" style="justify-content:flex-start"><button class="btn pri" id="dcon">Connect to Google Drive</button><button class="btn" id="dsync" hidden>Sync now</button><button class="btn" id="ddis" hidden>Disconnect</button></div>
+  </div>
   <div class="foot"><button class="btn" id="dclose">Close</button></div>
 </div></dialog>
 <dialog id="mind" aria-labelledby="mindtitle"><div class="sheet">
@@ -265,7 +275,10 @@ function norm(d){return{
   settings:d.settings&&typeof d.settings==='object'?d.settings:{}}}
 function load(){try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&!validate(d))return norm(d)}catch{}return norm({})}
 let db=load();
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(db))}catch{toast('Could not save: browser storage is unavailable.')}};
+const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(db));return true}catch{return false}};
+const save=()=>{if(!persist())toast('Could not save: browser storage is unavailable.');
+  if(drvState().connected){try{localStorage.setItem(CHGK,new Date().toISOString())}catch{}
+    clearTimeout(pushT);pushT=setTimeout(pushLocal,2500)}};
 
 /* ============ Habit schedule & streaks ============ */
 function due(h,ds){
@@ -411,6 +424,29 @@ function trainD(N,rp,shape,holes){
 const ORDER=[['hr','wheel','url(#gT)'],['min','wheel','url(#gH)'],['thr','wheel','url(#gC)'],
   ['sec','wheel','url(#gE)'],['escape','wheel','url(#gB2)'],['escape','pin','url(#gS)'],
   ['sec','pin','url(#gS)'],['thr','pin','url(#gS)'],['min','pin','url(#gS)']];
+/* Gear-train recovery: CSS drives the motion, JS only re-aligns phase and
+   force-restarts the animations when the browser resumes a hidden/suspended page. */
+let trainSpins=null,trainVisBound=false,trainLeft=false;
+function resyncTrain(){
+  if(!trainSpins||!trainSpins.length)return;
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const phase=-(((Date.now()/1000)%1+1)%1);
+  for(const e of trainSpins){
+    const n=getComputedStyle(e).animationName;
+    if(!n||n==='none')continue;
+    e.style.animationDelay=phase+'s';
+    e.style.animationName='none';void e.getBoundingClientRect();e.style.animationName=n;
+  }}
+function bindTrainRecovery(){
+  if(trainVisBound)return;trainVisBound=true;
+  document.addEventListener('visibilitychange',()=>{
+    if(document.visibilityState==='visible'){if(trainLeft){trainLeft=false;resyncTrain()}}
+    else trainLeft=true});
+  window.addEventListener('blur',()=>{trainLeft=true});
+  window.addEventListener('focus',()=>{if(trainLeft){trainLeft=false;resyncTrain()}});
+  window.addEventListener('pagehide',()=>{trainLeft=true});
+  window.addEventListener('pageshow',()=>{trainLeft=false;resyncTrain()});
+}
 function makeTrain(){
   const G=el('g',{id:'train','aria-hidden':'true'}),defs=el('defs'),tf=el('g',{id:'tf'});
   G.append(defs,tf);
@@ -421,7 +457,6 @@ function makeTrain(){
     grad('gH',[['0','#B57BC8'],['.55','#773892'],['1','#57266C']]),
     grad('gT',[['0','#6776E8'],['.55','#3340B8'],['1','#202A7E']]),
     grad('gS',[['0','#4E5860'],['.55','#39424A'],['1','#2A3138']]));
-  let dly=0;
   ORDER.forEach(o=>{
     const i=CHAIN.findIndex(g=>g.id===o[0]),pin=o[1]==='pin',g=CHAIN[i];
     const d=trainD(pin?g.pin.teeth:g.teeth,pin?g.pin.rp:g.rp,g.shape,pin?0:4);
@@ -431,7 +466,7 @@ function makeTrain(){
     spin.style.animationName=g.dir>0?'spin':'spinr';
     spin.style.animationDuration=`calc(${g.base}s / var(--sp,1))`;
     spin.style.animationTimingFunction=`steps(${g.base})`;
-    spin.style.animationDelay=dly+'s';
+    spin.style.animationDelay='0s';
     spin.append(el('path',{d,class:'halo','fill-rule':'evenodd'}),
       el('path',{d,class:'body'+(pin?' st':''),'fill-rule':'evenodd',fill:o[2]}));
     outer.append(spin);tf.append(outer)});
@@ -444,20 +479,9 @@ function makeTrain(){
   let R=0;TC.forEach((c,i)=>{R=Math.max(R,Math.hypot(c.x,c.y)+R0[i])});
   const s=134/R;
   tf.setAttribute('transform',`translate(${C} ${C}) scale(${s.toFixed(4)})`);
-  const w=new Date().getSeconds()+new Date().getMilliseconds()/1000;
-  dly=(w-Math.ceil(w))||0;
-  tf.querySelectorAll('.spin,.beat').forEach(e=>e.style.animationDelay=dly+'s');
-  const sync=tf.querySelector('.spin');let prev='';
-  if(!matchMedia('(prefers-reduced-motion: reduce)').matches){
-    const si=setInterval(function(){
-      const cur=getComputedStyle(sync).transform;
-      if(cur!==prev){
-        if(prev!==''){
-          const f=((Date.now()/1000)%1+1)%1;
-          tf.querySelectorAll('.spin,.beat').forEach(e=>e.style.animationDelay=(parseFloat(e.style.animationDelay)-f)+'s');
-          clearInterval(si)}
-        prev=cur}
-    },40)}
+  trainSpins=[...tf.querySelectorAll('.spin,.beat')];
+  bindTrainRecovery();
+  resyncTrain();
   return G}
 
 /* ============ Dial ============ */
@@ -593,8 +617,9 @@ function tick(){
   if(view!==todayStr())return;
   if(!$('.dial').contains(document.activeElement)&&!document.querySelector('dialog[open]'))return render();
   const h=$('#hand'),p=$('#prog');
-  if(h)h.setAttribute('transform',`rotate(${ang(nowMin())} ${C} ${C})`);
-  if(p)p.setAttribute('d',arc(R_PROG,0,Math.max(.1,ang(nowMin()))))}
+  if(h||p){const a=ang(nowMin());
+    if(h)h.setAttribute('transform',`rotate(${a} ${C} ${C})`);
+    if(p)p.setAttribute('d',arc(R_PROG,0,Math.max(.1,a)))}}
 
 /* ============ Navigation ============ */
 const go=n=>{view=addD(view,n);sel=null;render()};
@@ -717,7 +742,7 @@ refreshMind();
 
 /* ============ Import / export ============ */
 const ddlg=$('#data');let pending=null;
-$('#dataBtn').onclick=()=>{$('#imsg').replaceChildren();pending=null;ddlg.showModal()};
+$('#dataBtn').onclick=()=>{$('#imsg').replaceChildren();pending=null;driveUI();ddlg.showModal()};
 $('#dclose').onclick=()=>ddlg.close();
 ddlg.addEventListener('click',e=>{if(e.target===ddlg)ddlg.close()});
 $('#exp').onclick=()=>{
@@ -744,6 +769,144 @@ function finish(merge){
     db.settings={...db.settings,...pending.settings}}
   else db=pending;
   pending=null;save();sel=null;ddlg.close();render();toast(merge?'Merged imported data':'Imported data')}
+
+/* ============ Google Drive sync ============ */
+const GDRIVE={clientId:atob('MTA2NzA3NTQ5NTIwMC1wMGhhdXJuanRwMzJvZm51YWVuNzQ5NzBybDN1OHY1di5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbQ=='),
+  folder:'MAK-Projects/Time-Dial-Sync',fileName:'time-dial-data.json',
+  scope:'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email'};
+const DRVK='timedial.v1.drive',CHGK='timedial.v1.drive.chg',TOKK='timedial.drive.token';
+const drvState=()=>{try{return JSON.parse(localStorage.getItem(DRVK))||{}}catch{return{}}};
+const drvSet=o=>{try{localStorage.setItem(DRVK,JSON.stringify(o))}catch{}};
+const localChanged=()=>{try{const t=new Date(localStorage.getItem(CHGK)||0).getTime();return isNaN(t)?0:t}catch{return 0}};
+const tok=()=>{try{return sessionStorage.getItem(TOKK)||''}catch{return ''}};
+const setTok=t=>{try{t?sessionStorage.setItem(TOKK,t):sessionStorage.removeItem(TOKK)}catch{}};
+const $dcon=$('#dcon'),$dsync=$('#dsync'),$ddis=$('#ddis');
+let syncing=false,pushT=null,pendingPush=false;
+const markSynced=o=>drvSet({...drvState(),connected:true,lastSyncedAt:new Date().toISOString(),...o});
+const driveUI=()=>{
+  const s=drvState(),on=!!s.connected,$st=$('#dstate');
+  $dcon.hidden=on;$dsync.hidden=!on;$ddis.hidden=!on;
+  if(on)$st.textContent=syncing?'Syncing…':`Connected${s.email?' as '+s.email:''}. Last sync ${s.lastSyncedAt?new Date(s.lastSyncedAt).toLocaleString():'never'}.`;
+  else $st.textContent=syncing?'Syncing…':'Disconnected. Your data stays on this device.';
+  $st.style.color='var(--mute)'};
+const driveNote=(m,err)=>{const $st=$('#dstate');$st.textContent=m;$st.style.color=err?'#A5271B':'var(--mute)';
+  if(err&&!/denied|cancelled|popup|origin|client id/i.test(err.message))console.error('Drive sync:',err)};
+function loadGis(){return new Promise((res,rej)=>{
+  if(window.google&&google.accounts&&google.accounts.oauth2)return res();
+  let done=false;
+  const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;
+  s.onload=()=>{if(!done){done=true;res()}};
+  s.onerror=()=>{if(!done){done=true;rej(new Error('Could not load Google Sign-In. Check your connection.'))}};
+  setTimeout(()=>{if(!done){done=true;rej(new Error('Google Sign-In timed out loading.'))}},15000);
+  document.head.append(s)})}
+function gisToken(interactive){
+  return loadGis().then(()=>new Promise((res,rej)=>{
+    try{const tc=google.accounts.oauth2.initTokenClient({client_id:GDRIVE.clientId,scope:GDRIVE.scope,
+      callback:r=>{if(r.error){setTok(null);rej(new Error(r.error_description||r.error));return}
+        setTok(r.access_token);res(r.access_token)}});
+      tc.requestAccessToken(interactive?{prompt:''}:{prompt:'none'})}
+    catch(e){rej(e)}}))}
+const gdFetch=async(path,opt={})=>{
+  const url=/^https?:/.test(path)?path:'https://www.googleapis.com/drive/v3'+path;
+  const ct=opt.ct,interactive=opt.interactive!==false,body=opt.body;
+  for(let i=0;i<2;i++){
+    let t=tok();if(!t){try{t=await gisToken(interactive||i>0)}catch(e){if(i===0&&interactive)continue;throw e}}
+    if(!t){if(i===0)continue;throw new Error('Could not get a Google access token.')}
+    const ctl=typeof AbortController!=='undefined'?new AbortController():null;
+    const to=ctl?setTimeout(()=>ctl.abort(),20000):null;
+    try{const r=await fetch(url,{method:opt.method||'GET',
+      headers:{Authorization:'Bearer '+t,Accept:'application/json, text/plain',...(ct?{'Content-Type':ct}:{})},
+      body,signal:ctl?ctl.signal:undefined});
+      if(to)clearTimeout(to);
+      if(r.status===401&&i===0){setTok(null);continue}
+      if(!r.ok){const txt=await r.text().catch(()=>'');throw new Error('Google Drive '+r.status+': '+(txt.match(/"message":\s*"([^"]*)"/)||['',txt.slice(0,80)])[1])}
+      return r}
+    catch(e){if(to)clearTimeout(to);if(e.name==='AbortError')throw new Error('Drive request timed out.');throw e}}};
+const gdJson=async(path,opt)=>{const r=await gdFetch(path,opt);return r.status===204?null:r.json()};
+const findDriveFile=async(name,parent,fields)=>{
+  const r=await gdFetch('/files?'+new URLSearchParams({q:`name='${name}' and '${parent}' in parents and trashed=false`,fields,spaces:'drive'}));
+  const j=await r.json();return(j.files||[])[0]||null};
+const ensureDriveFolder=async()=>{
+  let p='root';
+  for(const n of GDRIVE.folder.split('/')){
+    const f=await findDriveFile(n,p,'files(id,name)');
+    if(!f){const r=await gdJson('/files',{method:'POST',ct:'application/json',body:JSON.stringify({name:n,mimeType:'application/vnd.google-apps.folder',parents:[p]})});
+      if(!(r&&r.id))throw new Error('Could not create folder '+n);
+      p=r.id}else p=f.id}
+  return p};
+const multipart=(meta,data)=>{const b='td_sync_'+Math.random().toString(36).slice(2);
+  return{b,body:'--'+b+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+JSON.stringify(meta)+'\r\n--'+b+'\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n'+data+'\r\n--'+b+'--\r\n'}};
+const createDriveFile=async(folderId,data)=>{const mp=multipart({name:GDRIVE.fileName,parents:[folderId]},data);
+  const r=await gdJson('/upload/drive/v3/files?uploadType=multipart&fields=id,modifiedTime',{method:'POST',ct:'multipart/related; boundary='+mp.b,body:mp.body});
+  if(!(r&&r.id))throw new Error('Upload failed.');
+  return r};
+const updateDriveFile=async(fileId,data)=>{const mp=multipart({},data);
+  const r=await gdJson('/upload/drive/v3/files/'+fileId+'?uploadType=multipart&fields=id,modifiedTime',{method:'PATCH',ct:'multipart/related; boundary='+mp.b,body:mp.body});
+  if(!(r&&r.id))throw new Error('Upload failed.');
+  return r};
+const downloadDriveFile=async fileId=>{const r=await gdFetch('/files/'+fileId+'?alt=media',{interactive:false});return r.text()};
+const pushLocal=async()=>{
+  if(syncing){pendingPush=true;return}
+  if(!drvState().connected||!tok())return;
+  syncing=true;
+  try{const st=drvState(),data=JSON.stringify(db),localT=localChanged();let folderId=st.folderId,r;
+    if(folderId&&st.fileId)r=await updateDriveFile(st.fileId,data);
+    else{folderId=folderId||await ensureDriveFolder();r=await createDriveFile(folderId,data)}
+    markSynced({folderId,fileId:r.id,remoteT:r.modifiedTime,localT});driveUI()}
+  catch(e){driveNote('Auto-sync paused: '+e.message,true)}
+  finally{syncing=false}};
+const syncDrive=async()=>{
+  if(syncing){pendingPush=true;return}
+  syncing=true;driveUI();
+  try{
+    if(!tok())await gisToken(true);
+    const s=drvState(),localT=localChanged();
+    const folderId=await ensureDriveFolder();
+    const f=await findDriveFile(GDRIVE.fileName,folderId,'files(id,name,modifiedTime)');
+    const data=JSON.stringify(db);
+    if(!f){const r=await createDriveFile(folderId,data);
+      markSynced({folderId,fileId:r.id,remoteT:r.modifiedTime,localT});
+      toast('First backup saved to Drive');return}
+    const fT=new Date(f.modifiedTime).getTime();
+    if(s.remoteT===f.modifiedTime&&localT<=(s.localT||0)){
+      markSynced({folderId,fileId:f.id});return}
+    if(fT>=localT){
+      const txt=await downloadDriveFile(f.id);
+      if(txt===data){try{localStorage.setItem(CHGK,f.modifiedTime)}catch{}
+        markSynced({folderId,fileId:f.id,remoteT:f.modifiedTime,localT:fT});return}
+      const d=JSON.parse(txt),err=validate(d);
+      if(err)throw new Error('Remote copy is invalid: '+err);
+      try{localStorage.setItem(KEY+'.backup',JSON.stringify(db))}catch{}
+      db=norm(d);persist();
+      try{localStorage.setItem(CHGK,f.modifiedTime)}catch{}
+      markSynced({folderId,fileId:f.id,remoteT:f.modifiedTime,localT:fT});
+      render();toast('Loaded newer copy from Drive')}
+    else{const r=await updateDriveFile(f.id,data);
+      markSynced({folderId,fileId:r.id,remoteT:r.modifiedTime,localT});
+      toast('Synced to Drive')}}
+  catch(e){driveNote('Drive sync failed: '+e.message,true);toast('Drive sync failed')}
+  finally{syncing=false;driveUI();if(pendingPush){pendingPush=false;pushLocal()}}};
+const drvConnect=async()=>{
+  $dcon.disabled=true;
+  try{driveNote('Connecting to Google…');
+    await gisToken(true);
+    const r=await gdFetch('https://www.googleapis.com/oauth2/v3/userinfo',{interactive:false});
+    const info=await r.json();
+    drvSet({...drvState(),connected:true,email:info.email||''});
+    await syncDrive()}
+  catch(e){driveNote('Connect failed: '+e.message,true)}
+  finally{$dcon.disabled=false;driveUI()}};
+const drvDisconnect=()=>{setTok(null);drvSet({});driveNote('Disconnected.');toast('Drive sync disconnected')};
+$dcon.onclick=drvConnect;$dsync.onclick=()=>{driveNote('Syncing…');syncDrive()};$ddis.onclick=drvDisconnect;
+const silentSync=async()=>{if(!drvState().connected)return;
+  try{if(!tok())await gisToken(false)}catch{return}
+  if(drvState().connected)syncDrive()};
+let visT=null;
+const onVisible=()=>{if(document.visibilityState!=='visible'||!drvState().connected||syncing)return;
+  clearTimeout(visT);visT=setTimeout(silentSync,1200)};
+document.addEventListener('visibilitychange',onVisible);
+window.addEventListener('focus',onVisible);
+if(drvState().connected)setTimeout(silentSync,3000);
 
 /* ============ Start ============ */
 render();setInterval(tick,20000);
