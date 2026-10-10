@@ -28,15 +28,19 @@
 body{margin:0;min-height:100dvh;background:radial-gradient(125% 120% at 50% -10%,#F1F5F6,var(--bg) 60%);color:var(--ink);display:flex;flex-direction:column}
 button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}
 :focus-visible{outline:3px solid var(--tk);outline-offset:2px}
-header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px clamp(12px,3vw,28px)}
-h1{flex:1;min-width:0;margin:0;font:500 clamp(1.05rem,2.6vw,1.7rem) Fraunces,Georgia,serif;letter-spacing:-.01em}
-.nav{display:flex;gap:6px;flex:none}
+header{display:flex;flex-wrap:nowrap;align-items:center;justify-content:center;gap:10px;padding:14px clamp(10px,3vw,28px)}
+h1{flex:0 1 auto;min-width:0;margin:0;font:500 clamp(1.05rem,2.6vw,1.7rem) Fraunces,Georgia,serif;letter-spacing:-.01em}
+#today{display:block;max-width:100%;border:0;background:none;padding:4px 10px;border-radius:12px;font:inherit;letter-spacing:inherit;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .18s var(--ease)}
+#today:hover{background:rgba(15,32,39,.06)}
+#today .ds{display:none}
 .nav button,.ic{min-width:42px;height:42px;border:1px solid var(--line);background:var(--paper);border-radius:21px;padding:0 14px;white-space:nowrap;flex:none;transition:background .18s var(--ease),border-color .18s var(--ease),transform .18s var(--ease)}
 .nav button:hover,.ic:hover{background:#fff;border-color:var(--mute)}
 .pickwrap{position:relative;flex:none}
-#pick{white-space:nowrap}
-#gearBtn{display:grid;place-items:center;padding:0}
-#gearBtn svg{width:20px;height:20px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#prev,#next,#gearBtn,#dataBtn{display:grid;place-items:center;padding:0;width:42px}
+#prev,#next{font-size:1.4rem;line-height:1}
+#pick{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+#pick .pl{font-size:.95rem}
+#pick svg,#gearBtn svg,#dataBtn svg{width:20px;height:20px;display:block;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #gearBtn[aria-pressed="true"]{background:#fff;border-color:var(--mute);color:var(--ink)}
 body.hide-center #center{display:none}
 #jump{position:absolute;left:0;bottom:0;width:100%;height:1px;opacity:0;pointer-events:none;border:0;padding:0}
@@ -195,9 +199,13 @@ fieldset.days{border:1px solid var(--line);border-radius:12px;display:flex;flex-
 #toast.show{opacity:1;transform:translate(-50%,0)}
 @media(max-width:640px){
 .center:not(.panel){width:44%;padding:.7em}
-header{gap:8px 10px}
-h1{order:-1;flex:1 0 100%;text-align:center}
-.nav button,.ic{padding:0 10px}
+header{gap:6px;padding:10px 8px}
+h1{font-size:clamp(.82rem,3.7vw,1.05rem)}
+#today{padding:4px 4px}
+#today .dl{display:none}#today .ds{display:inline}
+.ic,#prev,#next,#gearBtn,#dataBtn{min-width:0;width:36px;height:36px;padding:0;border-radius:18px}
+#pick{justify-content:center}#pick .pl{display:none}
+#pick svg,#gearBtn svg,#dataBtn svg{width:18px;height:18px}
 .dial{width:min(96vw,calc(100dvh - 140px),880px)}
 .lb.mn{display:none}.lb.mj{font-size:20px}.grid{grid-template-columns:1fr}
 .center.panel{position:fixed;left:8px;right:8px;bottom:8px;top:auto;transform:none;width:auto;max-height:55dvh;font-size:.95rem;z-index:6}
@@ -207,15 +215,12 @@ body.has-sel .fab{display:none}}
 </head>
 <body>
 <header>
-  <div class="nav">
-    <button id="prev" aria-label="Previous day">‹</button>
-    <button id="today">Today</button>
-    <button id="next" aria-label="Next day">›</button>
-  </div>
-  <h1 id="dateTxt" aria-live="polite"></h1>
-  <span class="pickwrap"><button id="pick" class="ic" aria-label="Go to a date">Go to date</button><input type="date" id="jump" tabindex="-1" aria-label="Choose a date"></span>
+  <button id="prev" class="ic" aria-label="Previous day">‹</button>
+  <h1 id="dateTxt" aria-live="polite"><button id="today" type="button" title="Jump to today"><span class="dl"></span><span class="ds"></span></button></h1>
+  <button id="next" class="ic" aria-label="Next day">›</button>
+  <span class="pickwrap"><button id="pick" class="ic" aria-label="Go to a date" title="Go to date"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="4.5" width="18" height="16.5" rx="2.5"></rect><path d="M3 10h18M8 2.5v4M16 2.5v4"></path></svg><span class="pl">Go to date</span></button><input type="date" id="jump" tabindex="-1" aria-label="Choose a date"></span>
   <button id="gearBtn" class="ic" aria-label="Show or hide the centre panel" aria-pressed="false" title="Show/hide panel to see the gears"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
-  <button id="dataBtn" class="ic" aria-label="Export or import data">Data</button>
+  <button id="dataBtn" class="ic" aria-label="Export or import data" title="Your data"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"></path></svg></button>
 </header>
 <main>
   <div class="dial"><svg id="dial" viewBox="0 0 600 600" role="group"></svg><div id="center" class="center"></div></div>
@@ -763,7 +768,8 @@ function panel(c,s){
       el('button',{class:'btn danger',onclick:()=>remove(k,o)},'Delete')))}
 
 function render(){
-  $('#dateTxt').textContent=pd(view).toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  $('#today .dl').textContent=pd(view).toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  $('#today .ds').textContent=pd(view).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'});
   $('#today').setAttribute('aria-current',view===todayStr()?'date':'false');
   const list=items(view);dial(list);center(list)}
 function tick(){
