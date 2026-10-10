@@ -35,6 +35,10 @@ h1{flex:1;min-width:0;margin:0;font:500 clamp(1.05rem,2.6vw,1.7rem) Fraunces,Geo
 .nav button:hover,.ic:hover{background:#fff;border-color:var(--mute)}
 .pickwrap{position:relative;flex:none}
 #pick{white-space:nowrap}
+#gearBtn{display:grid;place-items:center;padding:0}
+#gearBtn svg{width:20px;height:20px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#gearBtn[aria-pressed="true"]{background:#fff;border-color:var(--mute);color:var(--ink)}
+body.hide-center #center{display:none}
 #jump{position:absolute;left:0;bottom:0;width:100%;height:1px;opacity:0;pointer-events:none;border:0;padding:0}
 main{flex:1;display:grid;place-items:center;padding:0 12px 18px}
 
@@ -200,6 +204,7 @@ body.has-sel .fab{display:none}}
   </div>
   <h1 id="dateTxt" aria-live="polite"></h1>
   <span class="pickwrap"><button id="pick" class="ic" aria-label="Go to a date">Go to date</button><input type="date" id="jump" tabindex="-1" aria-label="Choose a date"></span>
+  <button id="gearBtn" class="ic" aria-label="Show or hide the centre panel" aria-pressed="false" title="Show/hide panel to see the gears"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
   <button id="dataBtn" class="ic" aria-label="Export or import data">Data</button>
 </header>
 <main>
@@ -343,8 +348,8 @@ const EV_LANES=[236,219,202],EV_W=14;
 const MK_LANES=[184,165,146],MR=9;
 let view=todayStr(),sel=null;
 const kd=f=>e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();f()}};
-const pick=s=>()=>{sel={k:s.k,id:s.id};render();$('#center').querySelector('button')?.focus()};
-const pickCl=cl=>()=>{sel={k:'cluster',id:cl.id,ids:cl.map(m=>m.id)};render();$('#center').querySelector('button')?.focus()};
+const pick=s=>()=>{setCenter(true);sel={k:s.k,id:s.id};render();$('#center').querySelector('button')?.focus()};
+const pickCl=cl=>()=>{setCenter(true);sel={k:'cluster',id:cl.id,ids:cl.map(m=>m.id)};render();$('#center').querySelector('button')?.focus()};
 
 function icon(k){
   const s=el('svg',{viewBox:'-12 -12 24 24',width:22,height:22,'aria-hidden':'true',class:'k-'+k});
@@ -597,11 +602,14 @@ function center(list){
 
 function clusterPanel(c,its){
   c.classList.add('panel','k-cluster');
-  c.append(el('div',{class:'chip'},`${its.length} activities`),
+  c.append(el('button',{type:'button',class:'xclose',onclick:()=>{sel=null;render()},'aria-label':'Close details'},'✕'),
+    el('div',{class:'chip'},`${its.length} activities`),
     el('h2',{},`${fm(its[0].t)}–${fm(its[its.length-1].t)}`),
     el('div',{class:'clist'},its.map(i=>el('button',{class:'crow2 k-'+i.k,onclick:pick(i)},
-      el('span',{class:'cdot','aria-hidden':'true'}),el('span',{class:'cttl'},i.title),el('span',{class:'ctime'},fm(i.t))))),
-    el('div',{class:'btns'},el('button',{class:'btn',onclick:()=>{sel=null;render()}},'Close')))}
+      el('span',{class:'cdot','aria-hidden':'true'}),
+      el('span',{class:'cttl'},i.title),
+      el('span',{class:'ctime'},fm(i.t))
+    ))));}
 
 function panel(c,s){
   const o=s.o,k=s.k;c.classList.add('panel','k-'+k);
@@ -612,14 +620,14 @@ function panel(c,s){
   if(k==='habit'){const st=streaks(o);lines.push(`${fm(s.t)} · ${repText(o)}`,`Streak ${pl(st.cur,'day')} · best ${pl(st.best,'day')}`)}
   o.notes&&lines.push(o.notes);
   const list=k==='chore'&&o.items.length?el('div',{class:'cklist'},o.items.map((it,i)=>el('label',{class:'ck'+(it.done?' dn':'')},el('input',{type:'checkbox',checked:it.done,onchange:ev=>{it.done=ev.target.checked;o.done=o.items.every(x=>x.done);save();render();$('#center').querySelectorAll('input')[i]?.focus()}}),el('span',{},it.t)))):null;
-  c.append(el('div',{class:'chip'},KIND[k]),el('h2',{class:s.done?'dn':''},s.title),
+  c.append(el('button',{type:'button',class:'xclose',onclick:()=>{sel=null;render()},'aria-label':'Close details'},'✕'),
+    el('div',{class:'chip'},KIND[k]),el('h2',{class:s.done?'dn':''},s.title),
     ...lines.map(l=>el('p',{},l)),...(list?[list]:[]),
     el('div',{class:'btns'},
       el('button',{class:'btn pri',onclick:()=>{toggle(s);render()}},s.done?'Undo':'Mark done'),
       k==='task'&&!o.done&&el('button',{class:'btn',onclick:()=>{defer(o);sel=o.date===view?sel:null;render()}},'Defer'),
       el('button',{class:'btn',onclick:()=>openForm(k,o)},'Edit'),
-      el('button',{class:'btn danger',onclick:()=>remove(k,o)},'Delete'),
-      el('button',{class:'btn',onclick:()=>{sel=null;render()},'aria-label':'Close details'},'Close')))}
+      el('button',{class:'btn danger',onclick:()=>remove(k,o)},'Delete')))}
 
 function render(){
   $('#dateTxt').textContent=pd(view).toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
@@ -640,6 +648,9 @@ $('#today').onclick=()=>{view=todayStr();sel=null;render()};
 const jump=$('#jump');
 $('#pick').onclick=()=>{jump.value=view;try{jump.showPicker()}catch{jump.focus();jump.click()}};
 jump.onchange=()=>{if(RD.test(jump.value)){view=jump.value;sel=null;render()}};
+const gearBtn=$('#gearBtn');
+function setCenter(show){document.body.classList.toggle('hide-center',!show);gearBtn.setAttribute('aria-pressed',show?'false':'true')}
+gearBtn.onclick=()=>setCenter(document.body.classList.contains('hide-center'));
 
 /* ============ Floating + menu ============ */
 const fab=$('#fab'),bubs=$('#bubs');
