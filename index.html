@@ -55,16 +55,25 @@ main{flex:1;display:grid;place-items:center;padding:0 12px 18px}
 .halo{fill:var(--bg);stroke:var(--bg);stroke-width:7;stroke-linejoin:round;stroke-linecap:round}
 .body{stroke:#8A631E;stroke-width:1.1;stroke-opacity:.5;stroke-linejoin:round}
 .body.st{stroke:#1F262C;stroke-opacity:.6}
-.spin{animation-fill-mode:both;transform:rotate(var(--ph))}
-@keyframes spin{from{transform:rotate(var(--ph))}to{transform:rotate(calc(var(--ph) + 360deg))}}
-@keyframes spinr{from{transform:rotate(var(--ph))}to{transform:rotate(calc(var(--ph) - 360deg))}}
-.beat{transform-box:fill-box;transform-origin:center;animation:beat 1s cubic-bezier(.2,.85,.3,1) infinite}
-@keyframes beat{0%,55%,100%{transform:scale(1);opacity:1}14%{transform:scale(1.5);opacity:.5}}
+/* The escape pinion is the one large compound pinion; it is drawn recessed so the
+   gold escape wheel stays the dominant shape and the station reads as one wheel. */
+.halo.rc{fill:none;stroke:#1F262C;stroke-opacity:.25;stroke-width:1.3}
+.body.rc{fill-opacity:.55}
+/* Gear rotation is driven entirely from JavaScript (single requestAnimationFrame
+   loop, absolute angles from the local clock) so no CSS animation timeline can
+   stall, drift, or accumulate steps. `.spin` groups only need a stable origin. */
+.spin{transform-origin:0 0}
 .night{fill:none;stroke:var(--night);stroke-width:20;stroke-linecap:butt;opacity:.12}
 .bezel{fill:none;stroke:var(--line);stroke-width:1;opacity:.5}
 .tk{stroke:var(--mute);stroke-width:1;opacity:.32}
 .tk.q{stroke-width:1.5;opacity:.55}
 .tk.h{stroke-width:2;opacity:.85;stroke:var(--ink)}
+/* The wheels are calibrated with the dial's own tick language: an inset ivory
+   collar carries one division per tooth, a heavier mark every sixth tooth, and a
+   single red index tooth marking each wheel's zero (in the current-time colour). */
+.gr-col{fill:none;stroke:var(--paper-hi);opacity:.85}
+.tk.g{opacity:.42}
+.tk.ix{stroke:var(--now);stroke-width:2.4;opacity:.95;stroke-linecap:round}
 .lb{font:500 12.5px "Instrument Sans";fill:var(--mute);text-anchor:middle;dominant-baseline:central;font-variant-numeric:tabular-nums}
 .lb.mj{font-size:17px;font-weight:700;fill:var(--ink)}
 
@@ -407,13 +416,24 @@ function layoutMarkers(mks){
     i=j}
   return{lane:laneOf,clusters}}
 
-/* ============ Movement: the gear train in the hollow ============ */
+/* ============ Movement: the gear train in the hollow ============
+   A compound train: every wheel carries a pinion on the SAME shaft, and each
+   pinion drives the next wheel. The shared module m = 2*rp/N equals 6 for every
+   wheel and pinion that actually mesh, so each centre distance is exactly the
+   sum of the two pitch radii. Because a shaft forces equal speeds and external
+   gears satisfy w2 = -w1*(N1/N2), the periods below are not decorative: working
+   back from the hour wheel (one turn per 12 h) they are the only periods the
+   tooth counts allow, and they land on the classic clock divisions
+   (escape 30 s, seconds 60 s, third 360 s, minute 3600 s, hour 43200 s).
+   checkTrain() re-derives and proves all of this at start-up. */
+/* ==GEAR-CORE-BEGIN== */
 const RAD=Math.PI/180;
-const CHAIN=[{id:'escape',teeth:30,rp:66,shape:'point',dir:1,base:30,pin:{teeth:15,rp:45}},
-  {id:'sec',teeth:30,rp:90,dir:-1,base:60,pin:{teeth:6,rp:18}},
-  {id:'thr',teeth:36,rp:108,dir:1,base:360,pin:{teeth:6,rp:18}},
-  {id:'min',teeth:60,rp:180,dir:-1,base:3600,pin:{teeth:6,rp:18}},
-  {id:'hr',teeth:72,rp:216,dir:1,base:43200,pin:null}];
+const CHAIN=[
+  {id:'escape',teeth:30,rp:66,                dir:1, period:30,   escapement:true, pin:{teeth:15,rp:45}},
+  {id:'sec',   teeth:30,rp:90,              dir:-1,period:60,   pin:{teeth:6,rp:18}},
+  {id:'thr',   teeth:36,rp:108,             dir:1, period:360,  pin:{teeth:6,rp:18}},
+  {id:'min',   teeth:60,rp:180,             dir:-1,period:3600, pin:{teeth:6,rp:18}},
+  {id:'hr',    teeth:72,rp:216,             dir:1, period:43200,pin:null}];
 const Rg=137,g0=(180+18.2)*RAD,alf=[59.03,54.76,92.54,117.26].map(x=>x*RAD),TC=[];
 for(let i=0;i<5;i++){const a=g0+alf.slice(0,i).reduce((s,x)=>s+x,0);
   TC.push({x:Rg*Math.sin(a),y:-Rg*Math.cos(a)})}
@@ -438,32 +458,85 @@ function trainD(N,rp,shape,holes){
     d.push('a'+hr.toFixed(2)+' '+hr.toFixed(2)+' 0 1 0 '+(2*hr).toFixed(2)+',0');
     d.push('a'+hr.toFixed(2)+' '+hr.toFixed(2)+' 0 1 0 '+(-2*hr).toFixed(2)+',0Z')}
   return d.join('')}
+/* Calibrate a wheel with the dial's own tick language: an inset ivory collar of
+   radial graduations, one per tooth, a heavier mark every sixth tooth, and a
+   single red index tooth at the wheel's zero (the current-time colour). Pinions
+   are left plain - they are the quiet drivers. */
+function trainGrad(N,rp){
+  const m=2*rp/N,rR=rp-1.25*m,rOut=rR-1,st=360/N;
+  const lMin=.028*rp,lMaj=.052*rp,g=el('g',{class:'grad'});
+  g.append(el('circle',{cx:0,cy:0,r:+(rOut-lMaj/2).toFixed(2),class:'gr-col','stroke-width':+(lMaj+2.6).toFixed(2)}));
+  for(let k=0;k<N;k++){const a=k*st,maj=k%6===0,len=maj?lMaj:lMin,[x1,y1]=pol(rOut,a),[x2,y2]=pol(rOut-len,a);
+    g.append(el('line',{x1:+(+x1).toFixed(2),y1:+(+y1).toFixed(2),x2:+(+x2).toFixed(2),y2:+(+y2).toFixed(2),class:'tk'+(k===0?' ix':maj?' h':' g')}))}
+  return g}
 const ORDER=[['hr','wheel','url(#gT)'],['min','wheel','url(#gH)'],['thr','wheel','url(#gC)'],
   ['sec','wheel','url(#gE)'],['escape','wheel','url(#gB2)'],['escape','pin','url(#gS)'],
   ['sec','pin','url(#gS)'],['thr','pin','url(#gS)'],['min','pin','url(#gS)']];
-/* Gear-train recovery: CSS drives the motion, JS only re-aligns phase and
-   force-restarts the animations when the browser resumes a hidden/suspended page. */
-let trainSpins=null,trainVisBound=false,trainLeft=false;
-function resyncTrain(){
-  if(!trainSpins||!trainSpins.length)return;
-  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-  const phase=-(((Date.now()/1000)%1+1)%1);
-  for(const e of trainSpins){
-    const n=getComputedStyle(e).animationName;
-    if(!n||n==='none')continue;
-    e.style.animationDelay=phase+'s';
-    e.style.animationName='none';void e.getBoundingClientRect();e.style.animationName=n;
-  }}
-function bindTrainRecovery(){
-  if(trainVisBound)return;trainVisBound=true;
-  document.addEventListener('visibilitychange',()=>{
-    if(document.visibilityState==='visible'){if(trainLeft){trainLeft=false;resyncTrain()}}
-    else trainLeft=true});
-  window.addEventListener('blur',()=>{trainLeft=true});
-  window.addEventListener('focus',()=>{if(trainLeft){trainLeft=false;resyncTrain()}});
-  window.addEventListener('pagehide',()=>{trainLeft=true});
-  window.addEventListener('pageshow',()=>{trainLeft=false;resyncTrain()});
-}
+/* ---- Single source of truth: absolute gear angles from the local clock ----
+   T = seconds elapsed since local midnight, with fractional seconds. Every wheel
+   angle is computed directly from T, never accumulated, so nothing can drift and
+   a frame missed while a tab was hidden is simply skipped. Only the escape WHEEL
+   (the escapement) is discrete: it advances one tooth per second, synchronised to
+   the local second, giving an unmistakable 30-tick motion. Its pinion is NOT
+   stepped - it belongs to the smooth train - so the pinion/seconds-wheel mesh is
+   exact at every instant and never visibly slips. The escapement wheel and its
+   pinion therefore share only their mean rate (both 30 s/rev); that single,
+   deliberately approximate shaft is the documented boundary between the visual
+   escapement and the mathematically synchronised clock display. */
+const frac=x=>x-Math.floor(x);
+function localSeconds(){const d=new Date();
+  return d.getHours()*3600+d.getMinutes()*60+d.getSeconds()+d.getMilliseconds()/1000}
+function gearAngle(spec,T){
+  const cycle=spec.escapement?Math.floor(T)/spec.period:frac(T/spec.period);
+  return spec.phase+spec.dir*360*cycle}
+const reducedMotion=()=>{try{return matchMedia('(prefers-reduced-motion: reduce)').matches}catch{return false}};
+
+let gearSpins=null,gearRAF=0,gearRunning=false,gearBound=false;
+function setGearTransforms(T){
+  if(!gearSpins)return;
+  for(const s of gearSpins){const a=((gearAngle(s.spec,T)%360)+360)%360;
+    s.node.setAttribute('transform','rotate('+a.toFixed(3)+')')}}
+function gearFrame(){gearRAF=0;if(!gearRunning)return;
+  setGearTransforms(localSeconds());gearRAF=requestAnimationFrame(gearFrame)}
+function startGears(){
+  if(!gearSpins)return;
+  if(reducedMotion()){gearRunning=false;setGearTransforms(localSeconds());return} /* static but accurate */
+  if(gearRunning)return;
+  gearRunning=true;gearRAF=requestAnimationFrame(gearFrame)}
+function stopGears(){gearRunning=false;if(gearRAF)cancelAnimationFrame(gearRAF);gearRAF=0}
+/* Recompute from the current timestamp the instant the page is shown again, then
+   resume a single frame loop. Window blur/focus, tab switches, device sleep and
+   bfcache restores are all handled by the same two calls. */
+function resumeGears(){setGearTransforms(localSeconds());startGears()}
+function bindGearRecovery(){
+  if(gearBound)return;gearBound=true;
+  document.addEventListener('visibilitychange',()=>{document.visibilityState==='visible'?resumeGears():stopGears()});
+  window.addEventListener('focus',resumeGears);
+  window.addEventListener('pageshow',resumeGears);
+  window.addEventListener('blur',stopGears);   /* session continues from the timestamp on refocus */
+  try{const mq=matchMedia('(prefers-reduced-motion: reduce)');
+    if(mq.addEventListener)mq.addEventListener('change',()=>reducedMotion()?stopGears():startGears())}catch{}}
+
+/* ---- Start-up self-check (no effect on rendering; warns once if the train is
+   not a valid transmission, so a bad edit can never hide behind pretty motion). */
+function checkTrain(){
+  const errs=[],mod=g=>2*g.rp/g.teeth;
+  for(let i=0;i<CHAIN.length-1;i++){
+    const a=CHAIN[i],b=CHAIN[i+1];
+    const d=Math.hypot(TC[i+1].x-TC[i].x,TC[i+1].y-TC[i].y),sum=a.pin.rp+b.rp;
+    if(Math.abs(d-sum)>0.5)errs.push(`${a.id} pinion / ${b.id} wheel: centre ${d.toFixed(2)} ≠ rp sum ${sum.toFixed(2)}`);
+    if(Math.abs(mod(a.pin)-mod(b))>1e-6)errs.push(`${a.id}/${b.id}: module mismatch`);
+    if(a.pin.teeth/a.period!==b.teeth/b.period)errs.push(`${a.id}/${b.id}: period ratio ≠ tooth ratio`);
+    if(a.dir===b.dir)errs.push(`${a.id}/${b.id}: external gears must turn opposite ways`);
+    const c0=a.pin.teeth*gearAngle({dir:a.dir,period:a.period,phase:PH[a.id].pin,escapement:false},0)
+            +b.teeth*gearAngle({dir:b.dir,period:b.period,phase:PH[b.id].wheel,escapement:false},0);
+    for(let t=1;t<=3600;t++){
+      const v=a.pin.teeth*gearAngle({dir:a.dir,period:a.period,phase:PH[a.id].pin,escapement:false},t)
+             +b.teeth*gearAngle({dir:b.dir,period:b.period,phase:PH[b.id].wheel,escapement:false},t);
+      if(Math.abs(((v-c0)%360+540)%360-180)>0.01){errs.push(`${a.id}/${b.id}: tooth alignment drifts at T=${t}`);break}}}
+  return errs}
+const TRAIN_ERRORS=checkTrain();
+if(TRAIN_ERRORS.length)console.warn('Gear-train self-check failed:',TRAIN_ERRORS);
 function makeTrain(){
   const G=el('g',{id:'train','aria-hidden':'true'}),defs=el('defs'),tf=el('g',{id:'tf'});
   G.append(defs,tf);
@@ -474,32 +547,35 @@ function makeTrain(){
     grad('gH',[['0','#B57BC8'],['.55','#773892'],['1','#57266C']]),
     grad('gT',[['0','#6776E8'],['.55','#3340B8'],['1','#202A7E']]),
     grad('gS',[['0','#4E5860'],['.55','#39424A'],['1','#2A3138']]));
+  gearSpins=[];
   ORDER.forEach(o=>{
     const i=CHAIN.findIndex(g=>g.id===o[0]),pin=o[1]==='pin',g=CHAIN[i];
-    const d=trainD(pin?g.pin.teeth:g.teeth,pin?g.pin.rp:g.rp,g.shape,pin?0:4);
+    const teeth=pin?g.pin.teeth:g.teeth,rp=pin?g.pin.rp:g.rp;
+    /* the escape wheel carries no spoke holes: its large pinion covers the centre,
+       and any holes there bleed through the pinion's translucency as rogue motion */
+    const d=trainD(teeth,rp,g.shape,(pin||o[0]==='escape')?0:4);
     const outer=el('g',{transform:`translate(${TC[i].x.toFixed(2)},${TC[i].y.toFixed(2)})`,'data-w':g.id});
-    const spin=el('g',{class:'spin'});
-    spin.style.setProperty('--ph',PH[g.id][o[1]].toFixed(2)+'deg');
-    spin.style.animationName=g.dir>0?'spin':'spinr';
-    spin.style.animationDuration=`calc(${g.base}s / var(--sp,1))`;
-    spin.style.animationTimingFunction=`steps(${g.base})`;
-    spin.style.animationDelay='0s';
-    spin.append(el('path',{d,class:'halo','fill-rule':'evenodd'}),
-      el('path',{d,class:'body'+(pin?' st':''),'fill-rule':'evenodd',fill:o[2]}));
-    outer.append(spin);tf.append(outer)});
-  TC.forEach((c,i)=>{
-    tf.append(el('circle',{cx:c.x.toFixed(2),cy:c.y.toFixed(2),r:11.5,fill:'url(#gS)',stroke:'#242B31','stroke-width':1}));
-    const j=el('circle',{cx:c.x.toFixed(2),cy:c.y.toFixed(2),r:7,fill:'#A3183B',stroke:'#700F2B','stroke-width':1.4});
-    if(!i)j.setAttribute('class','beat');
-    tf.append(j)});
+    const spin=el('g',{class:'spin','data-part':g.id+(pin?'-pin':'-wheel')});
+    const rc=pin&&g.id==='escape';   /* recess the large escape pinion */
+    spin.append(el('path',{d,class:'halo'+(rc?' rc':''),'fill-rule':'evenodd'}),
+      el('path',{d,class:'body'+(pin?' st':'')+(rc?' rc':''),'fill-rule':'evenodd',fill:o[2]}));
+    if(!pin)spin.append(trainGrad(teeth,rp));   /* wheels carry a calibration collar */
+    outer.append(spin);tf.append(outer);
+    /* each rotating group carries the exact spec used to place it from the clock;
+       only the escape WHEEL steps, its pinion rides the smooth train (see above) */
+    gearSpins.push({node:spin,spec:{id:g.id,teeth,dir:g.dir,period:g.period,
+      phase:PH[g.id][o[1]],escapement:!pin&&!!g.escapement}})});
+  TC.forEach(c=>{
+    tf.append(el('circle',{cx:c.x.toFixed(2),cy:c.y.toFixed(2),r:11.5,fill:'url(#gS)',stroke:'#242B31','stroke-width':1}),
+      el('circle',{cx:c.x.toFixed(2),cy:c.y.toFixed(2),r:7,fill:'#A3183B',stroke:'#700F2B','stroke-width':1.4}))});
   const R0=CHAIN.map(g=>g.rp+2*g.rp/g.teeth+4);
   let R=0;TC.forEach((c,i)=>{R=Math.max(R,Math.hypot(c.x,c.y)+R0[i])});
   const s=134/R;
   tf.setAttribute('transform',`translate(${C} ${C}) scale(${s.toFixed(4)})`);
-  trainSpins=[...tf.querySelectorAll('.spin,.beat')];
-  bindTrainRecovery();
-  resyncTrain();
+  bindGearRecovery();
+  resumeGears();                 /* place every wheel at its real-time phase immediately */
   return G}
+/* ==GEAR-CORE-END== */
 
 /* ============ Dial ============ */
 function dial(list){
@@ -634,6 +710,7 @@ function render(){
   $('#today').setAttribute('aria-current',view===todayStr()?'date':'false');
   const list=items(view);dial(list);center(list)}
 function tick(){
+  setGearTransforms(localSeconds());      /* keeps reduced-motion gears accurate too */
   if(view!==todayStr())return;
   if(!$('.dial').contains(document.activeElement)&&!document.querySelector('dialog[open]'))return render();
   const h=$('#hand'),p=$('#prog');

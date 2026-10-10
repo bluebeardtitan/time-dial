@@ -2,6 +2,6 @@
   "name": "time-dial",
   "private": true,
   "scripts": {
-    "test": "node --test tests/sync.test.js"
+    "test": "node --test tests/sync.test.js tests/gear.test.js"
   }
 }
