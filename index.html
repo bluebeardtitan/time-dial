@@ -213,8 +213,7 @@ body.has-sel .fab{display:none}}
   <hr class="sep">
   <div id="drive">
     <h3>Google Drive sync</h3>
-    <p style="margin:0 0 10px;color:var(--mute)">Backs up this browser’s copy to <b>MAK-Projects/Time-Dial-Sync</b> using your Google sign-in. Uploads happen only after you change something; returning to the app does a quick check for changes from other devices. If both sides changed, items are merged and nothing is silently dropped.</p>
-    <p id="dorigin" class="dstate"></p>
+    <p style="margin:0 0 10px;color:var(--mute)">Backs up your data to <b>MAK-Projects/Time-Dial-Sync</b> in Google Drive. Syncs when you make changes and checks for updates from other devices. Conflicting edits are merged.</p>
     <div id="dstate" role="status" class="dstate">Disconnected. Your data stays on this device.</div>
     <div class="foot" style="justify-content:flex-start"><button class="btn pri" id="dcon">Connect to Google Drive</button><button class="btn" id="dsync" hidden>Sync now</button><button class="btn" id="ddis" hidden>Disconnect</button></div>
   </div>
@@ -1172,7 +1171,6 @@ syncEngine=SyncCore.createSyncEngine({
   onEvent:e=>toast(e.type==='merged'?'Merged changes from another device':'Loaded newer copy from Drive')});
 
 const $dcon=$('#dcon'),$dsync=$('#dsync'),$ddis=$('#ddis'),$dst=$('#dstate');
-$('#dorigin').textContent='Sign-in origin: '+location.origin+'. In Google Cloud Console this exact origin must be listed under “Authorized JavaScript origins” (no path, no trailing slash). Redirect URIs are not used by this sign-in method.';
 function driveUI(){
   const s=syncEngine.status(),when=t=>t?new Date(t).toLocaleString():'never';
   $dcon.hidden=s.connected&&!s.needsAuth;$dcon.textContent=s.connected?'Reconnect to Google':'Connect to Google Drive';
@@ -1181,8 +1179,8 @@ function driveUI(){
   if(!s.connected)t='Disconnected. Your data stays on this device.';
   else if(s.syncing)t='Syncing…';
   else if(s.needsAuth){t=(s.failure&&s.failure.message)||'Google sign-in needs renewing.';err=true}
-  else if(s.failure){t='Last sync failed: '+s.failure.message+(s.paused?' Use “Sync now” to retry.':' Retrying automatically.');err=true}
-  else t='Connected'+(s.email?' as '+s.email:'')+'. '+(s.pending?'Changes waiting to sync.':'Up to date.')+' Last synced '+when(s.lastSyncedAt)+'.';
+  else if(s.failure){t='Sync failed: '+s.failure.message+(s.paused?' Select Sync now to retry.':' Retrying automatically.');err=true}
+  else t='Connected'+(s.email?' as '+s.email:'')+'. '+(s.pending?'Changes pending.':'Up to date.')+' Last synced: '+when(s.lastSyncedAt)+'.';
   $dst.textContent=t;$dst.style.color=err?'#A5271B':'var(--mute)'}
 async function drvConnect(){
   $dcon.disabled=true;
