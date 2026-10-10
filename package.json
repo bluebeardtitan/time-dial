@@ -1,0 +1,7 @@
+{
+  "name": "time-dial",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/sync.test.js"
+  }
+}
