@@ -19,7 +19,7 @@
 <style>
 :root{
   --bg:#E7ECEE;--paper:#F8FAFA;--paper-hi:#FDFEFE;--ink:#0F2027;--ink-2:#24343A;
-  --mute:#5A6C74;--faint:#8CA0A6;--line:#C6D2D6;--line-soft:#DDE6E8;
+  --mute:#5A6C74;--line:#C6D2D6;--line-soft:#DDE6E8;
   --ev:#0E6E77;--tk:#3340B8;--ch:#9A5B07;--hb:#7C3A92;--mind:#C2417A;--plan:#0F7A5A;--now:#D3341C;--night:#3E5464;
   --ease:cubic-bezier(.4,0,.2,1);
   font:16px/1.45 "Instrument Sans",system-ui,sans-serif;
@@ -33,12 +33,11 @@ h1{flex:0 1 auto;min-width:0;margin:0;font:500 clamp(1.05rem,2.6vw,1.7rem) Fraun
 #today{display:block;max-width:100%;border:0;background:none;padding:4px 10px;border-radius:12px;font:inherit;letter-spacing:inherit;color:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .18s var(--ease)}
 #today:hover{background:rgba(15,32,39,.06)}
 #today .ds{display:none}
-.nav button,.ic{min-width:42px;height:42px;border:1px solid var(--line);background:var(--paper);border-radius:21px;padding:0 14px;white-space:nowrap;flex:none;transition:background .18s var(--ease),border-color .18s var(--ease),transform .18s var(--ease)}
-.nav button:hover,.ic:hover{background:#fff;border-color:var(--mute)}
+.ic{display:inline-flex;align-items:center;justify-content:center;min-width:42px;height:42px;border:1px solid var(--line);background:var(--paper);border-radius:21px;padding:0;white-space:nowrap;flex:none;transition:background .18s var(--ease),border-color .18s var(--ease),transform .18s var(--ease)}
+.ic:hover{background:#fff;border-color:var(--mute)}
 .pickwrap{position:relative;flex:none}
-#prev,#next,#gearBtn,#dataBtn{display:grid;place-items:center;padding:0;width:42px}
 #prev,#next{font-size:1.4rem;line-height:1}
-#pick{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+#pick{gap:8px;padding:0 14px}
 #pick .pl{font-size:.95rem}
 #pick svg,#gearBtn svg,#dataBtn svg{width:20px;height:20px;display:block;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #gearBtn[aria-pressed="true"]{background:#fff;border-color:var(--mute);color:var(--ink)}
@@ -203,8 +202,8 @@ header{gap:6px;padding:10px 8px}
 h1{font-size:clamp(.82rem,3.7vw,1.05rem)}
 #today{padding:4px 4px}
 #today .dl{display:none}#today .ds{display:inline}
-.ic,#prev,#next,#gearBtn,#dataBtn{min-width:0;width:36px;height:36px;padding:0;border-radius:18px}
-#pick{justify-content:center}#pick .pl{display:none}
+.ic{min-width:0;width:36px;height:36px;border-radius:18px}
+#pick{padding:0}#pick .pl{display:none}
 #pick svg,#gearBtn svg,#dataBtn svg{width:18px;height:18px}
 .dial{width:min(96vw,calc(100dvh - 140px),880px)}
 .lb.mn{display:none}.lb.mj{font-size:20px}.grid{grid-template-columns:1fr}
@@ -461,14 +460,14 @@ for(let i=0;i<4;i++){const th=Math.atan2(TC[i+1].y-TC[i].y,TC[i+1].x-TC[i].x)/RA
   PH[CHAIN[i].id].pin=((th%360)+360)%360;
   PH[CHAIN[i+1].id]=PH[CHAIN[i+1].id]||{};
   PH[CHAIN[i+1].id].wheel=((th+180-180/CHAIN[i+1].teeth)%360+360)%360}
+const HOUR={dir:CHAIN[4].dir,period:CHAIN[4].period,phase:PH.hr.wheel};
 const pol=(r,a)=>[r*Math.cos(a*RAD),r*Math.sin(a*RAD)];
 const f2=p=>p[0].toFixed(2)+','+p[1].toFixed(2);
-function trainD(N,rp,shape,holes){
+function trainD(N,rp,holes){
   const m=2*rp/N,rT=rp+m,rR=rp-1.25*m,st=360/N,hw=90/N*.85,hwT=hw*.62,hwR=hw*1.08,d=[];let k,a;
   d.push('M'+f2(pol(rR,-hwR)));
   for(k=0;k<N;k++){a=k*st;
-    if(shape==='point')d.push('L'+f2(pol(rT,a)));
-    else{d.push('L'+f2(pol(rT,a-hwT)));d.push('L'+f2(pol(rT,a+hwT)))}
+    d.push('L'+f2(pol(rT,a-hwT)),'L'+f2(pol(rT,a+hwT)));
     d.push('L'+f2(pol(rR,a+hwR)));
     d.push('A'+rR.toFixed(2)+' '+rR.toFixed(2)+' 0 0 1 '+f2(pol(rR,(k+1)*st-hwR)))}
   d.push('Z');
@@ -527,6 +526,7 @@ const ORDER=[['hr','wheel','url(#gT)'],['min','wheel','url(#gH)'],['thr','wheel'
    visible. Its concealed arbor pinion is not drawn and is not stepped - it belongs to
    the smooth train - so the mathematically synchronised clock display never slips. */
 const frac=x=>x-Math.floor(x);
+const rot=(a,c)=>'rotate('+(((a%360)+360)%360).toFixed(3)+(c?' '+c:'')+')';   /* SVG rotate() with the angle wrapped to 0..360 */
 function localSeconds(){const d=new Date();
   return d.getHours()*3600+d.getMinutes()*60+d.getSeconds()+d.getMilliseconds()/1000}
 function gearAngle(spec,T){
@@ -535,27 +535,27 @@ function gearAngle(spec,T){
 const reducedMotion=()=>{try{return matchMedia('(prefers-reduced-motion: reduce)').matches}catch{return false}};
 
 let gearSpins=null,gearRAF=0,gearRunning=false,gearBound=false,gearTf=null,gearTfBase='';
-function hrSpec(){return gearSpins&&gearSpins.find(g=>g.spec.id==='hr'&&!g.spec.escapement)}
 function setHandAngle(T){
-  const h=document&&document.getElementById?document.getElementById('hand'):null;if(!h)return;
-  const w=hrSpec();
+  const h=document.getElementById('hand');if(!h)return;
   /* the 24-hour hand is the 12-hour hour wheel geared down 2:1 - one hand turn per day */
-  const a=((360*T/(2*(w?w.spec.period:43200)))%360+360)%360;
-  h.setAttribute('transform','rotate('+a.toFixed(3)+' '+C+' '+C+')')}
+  h.setAttribute('transform',rot(180*T/HOUR.period,C+' '+C))}
 function setAssemblyAngle(T){
-  /* The whole train hangs off the hour wheel and revolves with it: one turn per 12 h,
-     lockstep with the hour wheel's own angle. Spinning the rigid assembly about the dial
-     centre is a rigid motion, so every centre distance - and therefore every mesh - is
-     preserved frame to frame. */
-  if(!gearTf)return;
-  const w=hrSpec();if(!w)return;
-  const a=((gearAngle(w.spec,T)%360)+360)%360;
-  gearTf.setAttribute('transform',gearTfBase+' rotate('+a.toFixed(3)+')')}
+  /* The assembly of gear centres revolves about the dial centre at the hour wheel's rate:
+     one turn per 12 h. Returns the carrier angle so each wheel can cancel it (below). */
+  if(!gearTf)return 0;
+  const a=gearAngle(HOUR,T);
+  gearTf.setAttribute('transform',gearTfBase+' '+rot(a));
+  return a}
 function setGearTransforms(T){
   if(!gearSpins)return;
-  for(const s of gearSpins){const a=((gearAngle(s.spec,T)%360)+360)%360;
-    s.node.setAttribute('transform','rotate('+a.toFixed(3)+')')}
-  setAssemblyAngle(T);setHandAngle(T)}
+  /* Each wheel's turning is independent of the revolution: its angle on the dial is its own
+     clock-rate angle (hour wheel 12 h/turn, minute 1 h, ...), so the carrier angle is
+     subtracted from the wheel's local rotation. Only the CENTRES revolve. Note: with the
+     centres revolving and the wheels held to these absolute rates, meshing teeth are not
+     kept in phase and will slip through one another (a deliberate, requested trade-off). */
+  const ca=setAssemblyAngle(T);
+  for(const s of gearSpins)s.node.setAttribute('transform',rot(gearAngle(s.spec,T)-ca));
+  setHandAngle(T)}
 function gearFrame(){gearRAF=0;if(!gearRunning)return;
   setGearTransforms(localSeconds());gearRAF=requestAnimationFrame(gearFrame)}
 function startGears(){
@@ -614,7 +614,7 @@ function makeTrain(){
     const i=CHAIN.findIndex(g=>g.id===o[0]),pin=o[1]==='pin',g=CHAIN[i];
     const teeth=pin?g.pin.teeth:g.teeth,rp=pin?g.pin.rp:g.rp;
     const esc=g.id==='escape'&&!pin;   /* the escape wheel is its own stamped design */
-    const d=esc?escapeD(teeth,rp):trainD(teeth,rp,g.shape,4);
+    const d=esc?escapeD(teeth,rp):trainD(teeth,rp,pin?0:4);
     const outer=el('g',{transform:`translate(${TC[i].x.toFixed(2)},${TC[i].y.toFixed(2)})`,'data-w':g.id});
     const spin=el('g',{class:'spin','data-part':g.id+(pin?'-pin':'-wheel')});
     spin.append(el('path',{d,class:'halo','fill-rule':'evenodd'}),
@@ -624,7 +624,7 @@ function makeTrain(){
     outer.append(spin);tf.append(outer);
     /* each rotating group carries the exact spec used to place it from the clock;
        only the escape WHEEL steps, its pinion rides the smooth train (see above) */
-    gearSpins.push({node:spin,spec:{id:g.id,teeth,dir:g.dir,period:g.period,
+    gearSpins.push({node:spin,spec:{id:g.id,dir:g.dir,period:g.period,
       phase:PH[g.id][o[1]],escapement:!pin&&!!g.escapement}})});
   TC.forEach(c=>{
     tf.append(el('circle',{cx:c.x.toFixed(2),cy:c.y.toFixed(2),r:11.5,fill:'url(#gS)',stroke:'#242B31','stroke-width':1}),
@@ -1356,9 +1356,8 @@ $dsync.onclick=async()=>{
 $ddis.onclick=()=>{syncEngine.disconnect();auth.clear();toast('Drive sync disconnected')};
 /* Triggers (each registered exactly once): returning to the tab runs a throttled metadata check; regaining
    network resumes pending work. Focus/blur/timers never upload anything. */
-if(!window.__tdSyncBound){window.__tdSyncBound=true;
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncEngine.probe()});
-  window.addEventListener('online',()=>syncEngine.onOnline())}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')syncEngine.probe()});
+window.addEventListener('online',()=>syncEngine.onOnline());
 
 /* ============ Start ============ */
 render();setInterval(tick,20000);syncEngine.start();
