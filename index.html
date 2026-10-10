@@ -74,6 +74,7 @@ main{flex:1;display:grid;place-items:center;padding:0 12px 18px}
 .gr-col{fill:none;stroke:var(--paper-hi);opacity:.85}
 .tk.g{opacity:.42}
 .tk.ix{stroke:var(--now);stroke-width:2.4;opacity:.95;stroke-linecap:round}
+.gr-arr{fill:var(--now)}
 .lb{font:500 12.5px "Instrument Sans";fill:var(--mute);text-anchor:middle;dominant-baseline:central;font-variant-numeric:tabular-nums}
 .lb.mj{font-size:17px;font-weight:700;fill:var(--ink)}
 
@@ -429,7 +430,7 @@ function layoutMarkers(mks){
 /* ==GEAR-CORE-BEGIN== */
 const RAD=Math.PI/180;
 const CHAIN=[
-  {id:'escape',teeth:30,rp:66,                dir:1, period:30,   escapement:true, pin:{teeth:15,rp:45}},
+  {id:'escape',teeth:15,rp:66,                dir:1, period:30,   escapement:true, pin:{teeth:15,rp:45}},
   {id:'sec',   teeth:30,rp:90,              dir:-1,period:60,   pin:{teeth:6,rp:18}},
   {id:'thr',   teeth:36,rp:108,             dir:1, period:360,  pin:{teeth:6,rp:18}},
   {id:'min',   teeth:60,rp:180,             dir:-1,period:3600, pin:{teeth:6,rp:18}},
@@ -468,6 +469,9 @@ function trainGrad(N,rp){
   g.append(el('circle',{cx:0,cy:0,r:+(rOut-lMaj/2).toFixed(2),class:'gr-col','stroke-width':+(lMaj+2.6).toFixed(2)}));
   for(let k=0;k<N;k++){const a=k*st,maj=k%6===0,len=maj?lMaj:lMin,[x1,y1]=pol(rOut,a),[x2,y2]=pol(rOut-len,a);
     g.append(el('line',{x1:+(+x1).toFixed(2),y1:+(+y1).toFixed(2),x2:+(+x2).toFixed(2),y2:+(+y2).toFixed(2),class:'tk'+(k===0?' ix':maj?' h':' g')}))}
+  /* an arrowhead pinned to the zero division, pointing outward along the reference ray */
+  const rT=rOut+.006*rp,rB=rOut-.082*rp,rW=.052*rp;
+  g.append(el('path',{d:'M'+f2(pol(rT,0))+'L'+f2([rB,rW])+'L'+f2([rB,-rW])+'Z',class:'gr-arr'}));
   return g}
 const ORDER=[['hr','wheel','url(#gT)'],['min','wheel','url(#gH)'],['thr','wheel','url(#gC)'],
   ['sec','wheel','url(#gE)'],['escape','wheel','url(#gB2)'],['escape','pin','url(#gS)'],
@@ -476,8 +480,9 @@ const ORDER=[['hr','wheel','url(#gT)'],['min','wheel','url(#gH)'],['thr','wheel'
    T = seconds elapsed since local midnight, with fractional seconds. Every wheel
    angle is computed directly from T, never accumulated, so nothing can drift and
    a frame missed while a tab was hidden is simply skipped. Only the escape WHEEL
-   (the escapement) is discrete: it advances one tooth per second, synchronised to
-   the local second, giving an unmistakable 30-tick motion. Its pinion is NOT
+   (the escapement) is discrete: it advances half a tooth per second, synchronised to
+   the local second, giving an unmistakable 30-tick motion (a whole tooth per tick
+   would land on an identical neighbour and read as frozen). Its pinion is NOT
    stepped - it belongs to the smooth train - so the pinion/seconds-wheel mesh is
    exact at every instant and never visibly slips. The escapement wheel and its
    pinion therefore share only their mean rate (both 30 s/rev); that single,

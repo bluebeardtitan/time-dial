@@ -134,10 +134,11 @@ test('fractional seconds move the conventional wheels smoothly', () => {
   assert.ok(Math.abs(adiff(c, a)) - 6 < 1e-9, 'seconds wheel sweeps 6° per second');
 });
 
-test('escape wheel advances exactly one tooth per second and holds between ticks', () => {
+test('escape wheel advances a visible half-tooth per second and holds between ticks', () => {
   const esc = CHAIN[0];
   const e = T => sb.gearAngle({ dir: esc.dir, period: esc.period, phase: PH.escape.wheel, escapement: true }, T);
-  assert.equal(deg(e(6) - e(5)), 360 / esc.teeth, 'one tooth per tick');
+  assert.equal(deg(e(6) - e(5)), 360 / esc.period, 'one tick per second');
+  assert.equal(deg(e(6) - e(5)), 180 / esc.teeth, 'each tick is half a tooth, so the teeth visibly move');
   assert.equal(e(5.5), e(5.0), 'locked between ticks');
   assert.equal(deg(e(30) - e(0)), 0, 'one full turn every 30 s');
 });
