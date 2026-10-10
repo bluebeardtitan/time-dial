@@ -417,7 +417,7 @@ function layoutMarkers(mks){
     i=j}
   return{lane:laneOf,clusters}}
 
-/* ============ Movement: the gear train in the hollow ============
+/* ============ Movement: the gear train, anchored on the dial centre ============
    A compound train: every wheel carries a pinion on the SAME shaft, and each
    pinion drives the next wheel. The shared module m = 2*rp/N equals 6 for every
    wheel and pinion that actually mesh, so each centre distance is exactly the
@@ -438,6 +438,16 @@ const CHAIN=[
 const Rg=137,g0=(180+18.2)*RAD,alf=[59.03,54.76,92.54,117.26].map(x=>x*RAD),TC=[];
 for(let i=0;i<5;i++){const a=g0+alf.slice(0,i).reduce((s,x)=>s+x,0);
   TC.push({x:Rg*Math.sin(a),y:-Rg*Math.cos(a)})}
+/* Anchor the HOUR wheel - the last and largest link - dead centre of the dial, so the
+   movement hangs off the hand's own axis and the WHOLE train can revolve about it. The
+   chain is translated to that link and turned to fan it downward: a rigid move, so every
+   centre distance (and therefore every mesh) is exactly as built; only the arrangement on
+   the dial is re-composed. At run time the assembly then revolves with the hour wheel
+   (setAssemblyAngle), one turn per 12 h. */
+{const ax=TC[4].x,ay=TC[4].y;for(const p of TC){p.x-=ax;p.y-=ay}
+ let mx=0,my=0;for(const p of TC){mx+=p.x;my+=p.y}mx/=TC.length;my/=TC.length;
+ const ph=Math.PI/2-Math.atan2(my,mx),cp=Math.cos(ph),sn=Math.sin(ph);   /* fan the train down from centre */
+ for(const p of TC){const x=p.x*cp-p.y*sn;p.y=p.x*sn+p.y*cp;p.x=x}}
 const PH={escape:{wheel:0}};
 for(let i=0;i<4;i++){const th=Math.atan2(TC[i+1].y-TC[i].y,TC[i+1].x-TC[i].x)/RAD;
   PH[CHAIN[i].id].pin=((th%360)+360)%360;
@@ -496,11 +506,28 @@ function gearAngle(spec,T){
   return spec.phase+spec.dir*360*cycle}
 const reducedMotion=()=>{try{return matchMedia('(prefers-reduced-motion: reduce)').matches}catch{return false}};
 
-let gearSpins=null,gearRAF=0,gearRunning=false,gearBound=false;
+let gearSpins=null,gearRAF=0,gearRunning=false,gearBound=false,gearTf=null,gearTfBase='';
+function hrSpec(){return gearSpins&&gearSpins.find(g=>g.spec.id==='hr'&&!g.spec.escapement)}
+function setHandAngle(T){
+  const h=document&&document.getElementById?document.getElementById('hand'):null;if(!h)return;
+  const w=hrSpec();
+  /* the 24-hour hand is the 12-hour hour wheel geared down 2:1 - one hand turn per day */
+  const a=((360*T/(2*(w?w.spec.period:43200)))%360+360)%360;
+  h.setAttribute('transform','rotate('+a.toFixed(3)+' '+C+' '+C+')')}
+function setAssemblyAngle(T){
+  /* The whole train hangs off the hour wheel and revolves with it: one turn per 12 h,
+     lockstep with the hour wheel's own angle. Spinning the rigid assembly about the dial
+     centre is a rigid motion, so every centre distance - and therefore every mesh - is
+     preserved frame to frame. */
+  if(!gearTf)return;
+  const w=hrSpec();if(!w)return;
+  const a=((gearAngle(w.spec,T)%360)+360)%360;
+  gearTf.setAttribute('transform',gearTfBase+' rotate('+a.toFixed(3)+')')}
 function setGearTransforms(T){
   if(!gearSpins)return;
   for(const s of gearSpins){const a=((gearAngle(s.spec,T)%360)+360)%360;
-    s.node.setAttribute('transform','rotate('+a.toFixed(3)+')')}}
+    s.node.setAttribute('transform','rotate('+a.toFixed(3)+')')}
+  setAssemblyAngle(T);setHandAngle(T)}
 function gearFrame(){gearRAF=0;if(!gearRunning)return;
   setGearTransforms(localSeconds());gearRAF=requestAnimationFrame(gearFrame)}
 function startGears(){
@@ -576,7 +603,8 @@ function makeTrain(){
   const R0=CHAIN.map(g=>g.rp+2*g.rp/g.teeth+4);
   let R=0;TC.forEach((c,i)=>{R=Math.max(R,Math.hypot(c.x,c.y)+R0[i])});
   const s=134/R;
-  tf.setAttribute('transform',`translate(${C} ${C}) scale(${s.toFixed(4)})`);
+  gearTf=tf;gearTfBase=`translate(${C} ${C}) scale(${s.toFixed(4)})`;
+  tf.setAttribute('transform',gearTfBase);
   bindGearRecovery();
   resumeGears();                 /* place every wheel at its real-time phase immediately */
   return G}
@@ -648,7 +676,7 @@ function dial(list){
     mkG.append(g)});
   s.append(mkG);
 
-  // current-time indicator
+  // current-time indicator - the hour wheel drives it 2:1 in the gear loop (setHandAngle)
   if(isToday){const a=ang(nowMin());
     s.append(el('g',{id:'hand',transform:`rotate(${a} ${C} ${C})`,'aria-hidden':'true'},
       el('line',{x1:C,y1:C-R_IN,x2:C,y2:C-R_OUT}),
