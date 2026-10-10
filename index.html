@@ -603,7 +603,6 @@ function makeTrain(){
   const grad=(id,a)=>el('linearGradient',{id,x1:0,y1:0,x2:1,y2:1},a.map(s=>el('stop',{offset:s[0],'stop-color':s[1]})));
   defs.append(brushPattern(),
     grad('gBr',[['0','#E6DAA6'],['.5','#CDBC7E'],['1','#A99859']]),
-    grad('gB2',[['0','#D9A94E'],['.55','#BC8A34'],['1','#A0711F']]),
     grad('gE',[['0','#17A7B4'],['.55','#0B6E78'],['1','#06464E']]),
     grad('gC',[['0','#D69B3E'],['.55','#945A07'],['1','#6B4005']]),
     grad('gH',[['0','#B57BC8'],['.55','#773892'],['1','#57266C']]),
@@ -674,6 +673,8 @@ function dial(list){
 
   // point markers on radial lanes (with cluster fallback for dense crowds)
   const lay=layoutMarkers(mks),mkLane=lay.lane,mkG=el('g',{class:'markers'});
+  const rings=()=>[el('circle',{r:15,class:'ring-sel'}),el('circle',{r:16.5,class:'ring-foc'}),
+    el('circle',{r:16,class:'hit','aria-hidden':'true'})];
   if(sel&&KIND[sel.k]){const mi=mks.find(i=>i.k===sel.k&&i.id===sel.id);
     if(mi&&mkLane[mi.id]!==undefined){const r=MK_LANES[mkLane[mi.id]],a=ang(mi.t);
       if(r-11>R_HOLE+6){const[x1,y1]=P(R_HOLE+3,a),[x2,y2]=P(r-11,a);
@@ -686,8 +687,7 @@ function dial(list){
     const g=el('g',{class:cls,transform:`translate(${x.toFixed(2)} ${y.toFixed(2)})`,tabindex:0,role:'button',
       'aria-label':`${i.title}, ${KIND[i.k].toLowerCase()}, ${fm(i.t)}${i.done?', completed':''}${hi?', high priority':''}${i.o.deferred?', deferred':''}`,
       onclick:pick(i),onkeydown:kd(pick(i))});
-    g.append(el('title',{},i.title),el('circle',{r:15,class:'ring-sel'}),el('circle',{r:16.5,class:'ring-foc'}),
-      el('circle',{r:16,class:'hit','aria-hidden':'true'}),shapeEl(i.k));
+    g.append(el('title',{},i.title),...rings(),shapeEl(i.k));
     if(hi&&!i.done)g.append(el('circle',{r:2.6,class:'hdot','aria-hidden':'true'}));
     if(i.done)g.append(el('path',{d:'M-4.4 .2 -1.3 3.3 4.6 -3.4',class:'chk','aria-hidden':'true'}));
     if(i.o.deferred)g.append(deferBadge());
@@ -697,8 +697,7 @@ function dial(list){
     const isSel=sel&&sel.k==='cluster'&&sel.id===cl.id;
     const g=el('g',{class:`it k-cluster cluster${isSel?' sel':''}`,transform:`translate(${x.toFixed(2)} ${y.toFixed(2)})`,
       tabindex:0,role:'button','aria-label':`${cl.length} activities around ${fm(cl[0].t)}`,onclick:pickCl(cl),onkeydown:kd(pickCl(cl))});
-    g.append(el('title',{},cl.map(m=>m.title).join(', ')),el('circle',{r:15,class:'ring-sel'}),el('circle',{r:16.5,class:'ring-foc'}),
-      el('circle',{r:16,class:'hit','aria-hidden':'true'}),
+    g.append(el('title',{},cl.map(m=>m.title).join(', ')),...rings(),
       el('rect',{x:-6.5,y:-10.5,width:14,height:14,rx:5,class:'ccard2'}),
       el('rect',{x:-8.5,y:-8.5,width:17,height:17,rx:5,class:'ccard'}),
       el('text',{x:0,y:0,'aria-hidden':'true'},cl.length>9?'9+':String(cl.length)));
@@ -776,10 +775,8 @@ function tick(){
   setGearTransforms(localSeconds());      /* keeps reduced-motion gears accurate too */
   if(view!==todayStr())return;
   if(!$('.dial').contains(document.activeElement)&&!document.querySelector('dialog[open]'))return render();
-  const h=$('#hand'),p=$('#prog');
-  if(h||p){const a=ang(nowMin());
-    if(h)h.setAttribute('transform',`rotate(${a} ${C} ${C})`);
-    if(p)p.setAttribute('d',arc(R_PROG,0,Math.max(.1,a)))}}
+  const p=$('#prog');
+  if(p)p.setAttribute('d',arc(R_PROG,0,Math.max(.1,ang(nowMin()))))}
 
 /* ============ Navigation ============ */
 const go=n=>{view=addD(view,n);sel=null;render()};
@@ -1058,7 +1055,7 @@ function createAuth(o){
       entry.p=request(interactive).then(t=>{needsInteractive=false;return t},e=>{if(e&&e.needsAuth)needsInteractive=true;throw e})
         .finally(()=>{if(inflight===entry)inflight=null});
       inflight=entry;return entry.p}}
-  return{getToken,invalidate,clear(){invalidate();needsInteractive=false},hasValidToken:()=>!!valid(),needsInteractive:()=>needsInteractive}}
+  return{getToken,invalidate,clear(){invalidate();needsInteractive=false}}}
 
 /* ---- Drive adapter: folder/file lookup, metadata check, download, create/update ---- */
 function createDriveRemote(o){
@@ -1276,7 +1273,7 @@ function createSyncEngine(o){
     try{o.saveBase(null)}catch{}
     commit();emit()}
   function dispose(){epoch++;clearDebounce();clearRetry()}
-  return{noteLocalChange,requestSync,probe,onOnline,start,setConnected,authRestored,disconnect,dispose,status,_meta:meta,_snap:snap}}
+  return{noteLocalChange,requestSync,probe,onOnline,start,setConnected,authRestored,disconnect,dispose,status}}
 
 return{SyncError,createAuth,createDriveRemote,createSyncEngine,merge3,canon,hashStr}})();
 /* ==SYNC-CORE-END== */

@@ -35,7 +35,7 @@ function sandboxWithGears() {
     C: 300,
     Date: FakeDate,
     document: { createElementNS: (ns, t) => new N(t), createElement: t => new N(t), visibilityState: 'visible',
-      addEventListener: (t, f) => { (docL[t] = docL[t] || []).push(f); } },
+      getElementById: () => null, addEventListener: (t, f) => { (docL[t] = docL[t] || []).push(f); } },
     window: { addEventListener: (t, f) => { (winL[t] = winL[t] || []).push(f); } },
     matchMedia: () => ({ matches: false, addEventListener() {} }),
     requestAnimationFrame: f => { const id = ++seq; raf.set(id, f); return id; },
@@ -57,7 +57,7 @@ function sandboxWithGears() {
 }
 const sb = sandboxWithGears();
 const G = sb.makeTrain();
-const { CHAIN, TC, PH } = vm.runInContext('({CHAIN,TC,PH})', sb);
+const { CHAIN, TC, PH, HOUR } = vm.runInContext('({CHAIN,TC,PH,HOUR})', sb);
 const spinNodes = [];
 (function walk(n) { if (n.t === 'g' && n.a.class === 'spin') spinNodes.push(n); for (const c of n.ch) walk(c); })(G);
 const labels = spinNodes.map(s => s.a['data-part']);
@@ -134,11 +134,11 @@ test('fractional seconds move the conventional wheels smoothly', () => {
   assert.ok(Math.abs(adiff(c, a)) - 6 < 1e-9, 'seconds wheel sweeps 6° per second');
 });
 
-test('escape wheel advances a visible half-tooth per second and holds between ticks', () => {
+test('escape wheel advances a visible tooth per second and holds between ticks', () => {
   const esc = CHAIN[0];
   const e = T => sb.gearAngle({ dir: esc.dir, period: esc.period, phase: PH.escape.wheel, escapement: true }, T);
   assert.equal(deg(e(6) - e(5)), 360 / esc.period, 'one tick per second');
-  assert.equal(deg(e(6) - e(5)), 180 / esc.teeth, 'each tick is half a tooth, so the teeth visibly move');
+  assert.equal(deg(e(6) - e(5)), 360 / esc.teeth, 'each tick is one tooth, so the teeth visibly move');
   assert.equal(e(5.5), e(5.0), 'locked between ticks');
   assert.equal(deg(e(30) - e(0)), 0, 'one full turn every 30 s');
 });
@@ -150,12 +150,14 @@ test('escape pinion rides the smooth train (12°/s) so its mesh with seconds nev
   assert.ok(Math.abs(adiff(p(11), p(10)) - 12) < 1e-9, 'pinion averages 12°/s, matching the escape mean');
 });
 
-test('all nine rotating groups exist and are positioned by the clock', () => {
-  assert.equal(spinNodes.length, 9);
+test('all eight rotating groups exist and are positioned by the clock', () => {
+  assert.equal(spinNodes.length, 8);
   const at = T => { sb.setGearTransforms(T); return spinNodes.map(s => s.a.transform); };
   const t0 = at(0), t1 = at(123);
   assert.ok(t0.every(x => /^rotate\(/.test(x)), 'every group gets a rotate() transform');
-  assert.equal(t0.filter((x, i) => x !== t1[i]).length, 9, 'every group moves');
+  assert.equal(t0.filter((x, i) => x !== t1[i]).length, 7, 'every group but the carrier moves');
+  const hr = labels.indexOf('hr-wheel');
+  assert.equal(t0[hr], t1[hr], 'the hour wheel is the stationary carrier');
 });
 
 test('positions depend only on the timestamp, never on elapsed frames', () => {
@@ -184,7 +186,9 @@ test('the loop follows the wall clock across frames and a long sleep, without dr
   const check = (g, part) => {
     const idx = labels.indexOf(g.id + '-' + (part === 'pin' ? 'pin' : 'wheel'));
     const es = !!g.escapement && part === 'wheel';   /* only the escape WHEEL steps */
-    const exp = deg(sb.gearAngle({ dir: g.dir, period: g.period, phase: PH[g.id][part], escapement: es }, Tod(now)));
+    /* the drawn angle is the wheel's own clock angle minus the revolving carrier angle */
+    const exp = deg(sb.gearAngle({ dir: g.dir, period: g.period, phase: PH[g.id][part], escapement: es }, Tod(now))
+      - sb.gearAngle(HOUR, Tod(now)));
     assert.ok(Math.abs(adiff(read(idx), exp)) < 0.01, `${g.id} ${part}: got ${read(idx)} want ${exp}`);
   };
   for (let k = 0; k < 900; k++) { now += 137; sb.__setNow(now); sb.__pump(); }   // ~2 min of uneven frames
