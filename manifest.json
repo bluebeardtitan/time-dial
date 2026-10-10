@@ -1,0 +1,42 @@
+{
+  "name": "Time Dial",
+  "short_name": "Time Dial",
+  "description": "A calm, circular 24-hour planner. Lay out events, tasks, chores and habits on a clock and see your day at a glance.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "theme_color": "#E7ECEE",
+  "background_color": "#E7ECEE",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["productivity", "utilities", "lifestyle"],
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#E7ECEE">
+<title>Time Dial — Offline</title>
+<style>
+  :root{
+    --bg:#E7ECEE;--paper:#F8FAFA;--paper-hi:#FDFEFE;--ink:#0F2027;--mute:#5A6C74;
+    --line:#C6D2D6;--now:#D3341C;
+    font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;min-height:100dvh;color:var(--ink);
+    background:radial-gradient(125% 120% at 50% -10%,#F1F5F6,var(--bg) 60%);
+    display:grid;place-items:center;padding:24px;text-align:center;
+  }
+  .card{
+    width:min(420px,100%);background:var(--paper);border:1px solid var(--line);
+    border-radius:24px;padding:32px 26px;
+    box-shadow:0 20px 50px rgba(15,32,39,.14),inset 0 1px 0 rgba(255,255,255,.8);
+    display:grid;gap:14px;justify-items:center;
+  }
+  .dial{width:96px;height:96px}
+  h1{margin:0;font-size:1.4rem;font-weight:600}
+  p{margin:0;color:var(--mute);font-size:.95rem}
+  button{
+    cursor:pointer;font:inherit;color:#fff;background:var(--ink);border:0;
+    border-radius:999px;padding:.7em 1.4em;font-weight:600;
+    transition:background .18s ease;
+  }
+  button:hover{background:#24343A}
+  :focus-visible{outline:3px solid #3340B8;outline-offset:2px}
+  .hint{font-size:.82rem;color:var(--mute)}
+</style>
+</head>
+<body>
+  <main class="card">
+    <svg class="dial" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="50" r="42" fill="#F8FAFA" stroke="#0F2027" stroke-width="2.4"/>
+      <g stroke="#0F2027" stroke-width="2" stroke-linecap="round">
+        <line x1="50" y1="12" x2="50" y2="20"/>
+        <line x1="50" y1="80" x2="50" y2="88"/>
+        <line x1="12" y1="50" x2="20" y2="50"/>
+        <line x1="80" y1="50" x2="88" y2="50"/>
+      </g>
+      <line x1="50" y1="50" x2="72" y2="34" stroke="#D3341C" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="50" cy="50" r="4.5" fill="#D3341C"/>
+    </svg>
+    <h1>You’re offline</h1>
+    <p>Time Dial couldn’t reach the network. Your saved data is still on this device — reconnect to load the app and any Google Drive sync.</p>
+    <button id="retry" type="button">Try again</button>
+    <p class="hint">Tip: after opening the app once while online, it works without a connection.</p>
+  </main>
+  <script>
+    document.getElementById('retry').addEventListener('click', function () {
+      location.reload();
+    });
+  </script>
+</body>
+</html>
