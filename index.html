@@ -61,6 +61,7 @@ main{flex:1;display:grid;place-items:center;padding:0 12px 18px}
 /* The escape wheel is a single stamped brass plate (ratchet teeth, rim, four cutouts)
    with a brushed finish; the brush overlay is a pattern fill that turns with the wheel. */
 .body.esc{stroke:#7C6A33;stroke-opacity:.7;stroke-width:1.3}
+.esc-tooth{fill:var(--now);stroke:#7A170D;stroke-width:.7;stroke-linejoin:round}
 .brush{pointer-events:none}
 /* Gear rotation is driven entirely from JavaScript (single requestAnimationFrame
    loop, absolute angles from the local clock) so no CSS animation timeline can
@@ -502,6 +503,11 @@ function escapeD(N,rp){
     d.push('M'+f2(a)+'A'+rI.toFixed(2)+' '+rI.toFixed(2)+' 0 0 1 '+f2(b)+'Q'+f2(pol(rC,c))+' '+f2(a)+'Z')}
   d.push('M'+(-rH).toFixed(2)+',0a'+rH.toFixed(2)+' '+rH.toFixed(2)+' 0 1 0 '+(2*rH).toFixed(2)+',0a'+rH.toFixed(2)+' '+rH.toFixed(2)+' 0 1 0 '+(-2*rH).toFixed(2)+',0Z');
   return d.join('')}
+/* One reference tooth of the escape wheel, at the wheel's zero, stamped in the current-time
+   red so the escapement's discrete step can be read against the smooth train at a glance. */
+function escapeTooth(N,rp){
+  const rT=rp*1.1,rR=rp*.9,st=360/N,lean=.8*st;
+  return['M'+f2(pol(rR,0)),'L'+f2(pol(rT,lean)),'L'+f2(pol(rR,st)),'Z'].join('')}
 /* Brushed-metal texture: a tile of fine, slightly irregular light and dark streaks, drawn
    from a fixed seed so it is identical every load, laid at a shallow angle. */
 function brushPattern(){
@@ -619,6 +625,7 @@ function makeTrain(){
     spin.append(el('path',{d,class:'halo','fill-rule':'evenodd'}),
       el('path',{d,class:'body'+(pin?' st':'')+(esc?' esc':''),'fill-rule':'evenodd',fill:o[2]}));
     if(esc)spin.append(el('path',{d,class:'brush','fill-rule':'evenodd',fill:'url(#gBrush)'}));
+    if(esc)spin.append(el('path',{d:escapeTooth(teeth,rp),class:'esc-tooth'}));
     else if(!pin)spin.append(trainGrad(teeth,rp));   /* other wheels carry a calibration collar */
     outer.append(spin);tf.append(outer);
     /* each rotating group carries the exact spec used to place it from the clock;
