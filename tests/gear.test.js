@@ -28,6 +28,7 @@ function sandboxWithGears() {
   const docL = {}, winL = {}, raf = new Map();
   let seq = 0, fakeNow = Date.now();
   class FakeDate extends Date { constructor(...a) { a.length ? super(...a) : super(fakeNow); } static now() { return fakeNow; } }
+  const SERVER_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
   const sb = {
     console,
     NS: 'http://www.w3.org/2000/svg',
@@ -40,6 +41,8 @@ function sandboxWithGears() {
     matchMedia: () => ({ matches: false, addEventListener() {} }),
     requestAnimationFrame: f => { const id = ++seq; raf.set(id, f); return id; },
     cancelAnimationFrame: id => { raf.delete(id); },
+    serverNow: () => new Date(FakeDate.now() + SERVER_OFFSET_MS),
+    SERVER_OFFSET_MS,
   };
   sb.el = (t, a = {}, ...k) => {
     const n = new N(t);

@@ -270,8 +270,10 @@ const addD=(s,n)=>{const d=pd(s);d.setDate(d.getDate()+n);return ymd(d)};
 const dayDiff=(a,b)=>{const x=pd(a),y=pd(b);return Math.round((Date.UTC(y.getFullYear(),y.getMonth(),y.getDate())-Date.UTC(x.getFullYear(),x.getMonth(),x.getDate()))/864e5)};
 const tm=s=>{const[h,m]=s.split(':').map(Number);return h*60+m};
 const fm=m=>{m=Math.round(m);return`${pad(Math.floor(m/60))}:${pad(m%60)}`};
-const nowMin=()=>{const d=new Date();return d.getHours()*60+d.getMinutes()+d.getSeconds()/60};
-const todayStr=()=>ymd(new Date());
+const SERVER_OFFSET_MS = (5 * 60 + 30) * 60 * 1000; // UTC+5:30
+const serverNow = () => new Date(Date.now() + SERVER_OFFSET_MS);
+const nowMin=()=>{const d=serverNow();return d.getUTCHours()*60+d.getUTCMinutes()+d.getUTCSeconds()/60 + d.getUTCMilliseconds()/60000};
+const todayStr=()=>{const d=serverNow();return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`};
 const pl=(n,w)=>`${n} ${w}${n===1?'':'s'}`;
 const uid=()=>crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2,9);
 const NAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -303,7 +305,7 @@ function norm(d){return{
   tasks:(d.tasks||[]).map(t=>({notes:'',priority:'normal',done:false,deferred:false,deferCount:0,...t})),
   chores:(d.chores||[]).map(c=>({notes:'',time:'09:00',done:false,...c,items:(c.items||[]).map(i=>({t:String(i.t??''),done:!!i.done}))})),
   habits:(d.habits||[]).map(h=>({notes:'',every:2,days:[],...h,completions:[...new Set(h.completions||[])].sort()})),
-  mind:(d.mind||[]).map(m=>({created:ymd(new Date()),...m,text:String(m.text??'').trim()})).filter(m=>m.text),
+  mind:(d.mind||[]).map(m=>({created:todayStr(),...m,text:String(m.text??'').trim()})).filter(m=>m.text),
   settings:d.settings&&typeof d.settings==='object'?d.settings:{}}}
 function load(){try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&!validate(d))return norm(d)}catch{}return norm({})}
 let db=load();
@@ -533,8 +535,8 @@ const ORDER=[['hr','wheel','url(#gT)'],['min','wheel','url(#gH)'],['thr','wheel'
    the smooth train - so the mathematically synchronised clock display never slips. */
 const frac=x=>x-Math.floor(x);
 const rot=(a,c)=>'rotate('+(((a%360)+360)%360).toFixed(3)+(c?' '+c:'')+')';   /* SVG rotate() with the angle wrapped to 0..360 */
-function localSeconds(){const d=new Date();
-  return d.getHours()*3600+d.getMinutes()*60+d.getSeconds()+d.getMilliseconds()/1000}
+function serverSeconds(){const d=serverNow();
+  return d.getUTCHours()*3600+d.getUTCMinutes()*60+d.getUTCSeconds()+d.getUTCMilliseconds()/1000}
 function gearAngle(spec,T){
   const cycle=spec.escapement?Math.floor(T)/spec.period:frac(T/spec.period);
   return spec.phase+spec.dir*360*cycle}
@@ -563,17 +565,17 @@ function setGearTransforms(T){
   for(const s of gearSpins)s.node.setAttribute('transform',rot(gearAngle(s.spec,T)-ca));
   setHandAngle(T)}
 function gearFrame(){gearRAF=0;if(!gearRunning)return;
-  setGearTransforms(localSeconds());gearRAF=requestAnimationFrame(gearFrame)}
+  setGearTransforms(serverSeconds());gearRAF=requestAnimationFrame(gearFrame)}
 function startGears(){
   if(!gearSpins)return;
-  if(reducedMotion()){gearRunning=false;setGearTransforms(localSeconds());return} /* static but accurate */
+  if(reducedMotion()){gearRunning=false;setGearTransforms(serverSeconds());return} /* static but accurate */
   if(gearRunning)return;
   gearRunning=true;gearRAF=requestAnimationFrame(gearFrame)}
 function stopGears(){gearRunning=false;if(gearRAF)cancelAnimationFrame(gearRAF);gearRAF=0}
 /* Recompute from the current timestamp the instant the page is shown again, then
    resume a single frame loop. Window blur/focus, tab switches, device sleep and
    bfcache restores are all handled by the same two calls. */
-function resumeGears(){setGearTransforms(localSeconds());startGears()}
+function resumeGears(){setGearTransforms(serverSeconds());startGears()}
 function bindGearRecovery(){
   if(gearBound)return;gearBound=true;
   document.addEventListener('visibilitychange',()=>{document.visibilityState==='visible'?resumeGears():stopGears()});
