@@ -185,6 +185,26 @@ fieldset.days{border:1px solid var(--line);border-radius:12px;display:flex;flex-
 .mnote .x{border:0;background:none;color:var(--mute);font:1.15em/1 "Instrument Sans";padding:.15em .4em;border-radius:8px}
 .mnote .x:hover{background:rgba(15,32,39,.08);color:var(--ink)}
 .mempty{color:var(--mute);text-align:center;padding:.4em}
+/* Diary */
+.diary-section{display:grid;gap:10px;border:1px solid var(--line-soft);border-radius:16px;padding:12px;background:rgba(255,255,255,.7)}
+.diary-count{color:var(--mute);font-size:.9rem}
+.diary-desc{margin:0;color:var(--mute);font-size:.9rem}
+.diary-viewer{width:min(760px,calc(100vw - 24px));max-height:calc(100dvh - 40px);display:flex;flex-direction:column}
+.diary-header{display:flex;flex-direction:column;gap:8px;padding:22px 22px 12px}
+.diary-header-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.diary-title{margin:0;font:500 1.6rem Fraunces,Georgia,serif}
+.diary-search{flex:1;min-width:180px;border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:#fff}
+.diary-filter{border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:#fff;color:var(--ink)}
+.diary-body{padding:0 22px 22px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.diary-date-head{font:500 1.15rem Fraunces,Georgia,serif;margin-top:4px}
+.diary-card{border:1px solid var(--line-soft);background:linear-gradient(180deg,#fff,#FDFEFE);border-radius:16px;padding:12px 14px;box-shadow:0 8px 20px rgba(15,32,39,.06);display:flex;flex-direction:column;gap:8px}
+.diary-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;color:var(--mute);font-size:.85rem}
+.diary-type{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:var(--paper);font-size:.75rem;letter-spacing:.05em;text-transform:uppercase}
+.diary-text{white-space:pre-wrap;line-height:1.6;overflow-wrap:anywhere}
+.diary-actions{display:flex;gap:6px;flex-wrap:wrap}
+.exp-prompt{width:min(520px,calc(100vw - 24px))}
+.exp-prompt .exp-meta{color:var(--mute);font-size:.9rem;display:flex;flex-direction:column;gap:2px}
+.exp-prompt textarea{min-height:120px;resize:vertical}
 .planstep{display:grid;gap:14px;justify-items:center;text-align:center}
 .planstep .prog{color:var(--mute);font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
 .mq{font:500 1.3rem/1.25 Fraunces,Georgia,serif;overflow-wrap:anywhere;max-width:100%}
@@ -241,6 +261,14 @@ body.has-sel .fab{display:none}}
     <div id="dstate" role="status" class="dstate">Disconnected. Your data stays on this device.</div>
     <div class="foot" style="justify-content:flex-start"><button class="btn pri" id="dcon">Connect to Google Drive</button><button class="btn" id="dsync" hidden>Sync now</button><button class="btn" id="ddis" hidden>Disconnect</button></div>
   </div>
+  <hr class="sep">
+  <div id="diarySection">
+    <h3>Diary &amp; Experiences</h3>
+    <p class="diary-desc">A collection of moments, reflections, and experiences from your days.</p>
+    <div class="diary-count" id="diaryCount">0 experiences saved.</div>
+    <div class="foot" style="justify-content:flex-start"><button class="btn pri" id="viewDiary">View diary</button><button class="btn" id="exportDiaryMd">Export diary (.md)</button></div>
+    <div id="diaryEmpty" class="mempty" style="text-align:left;padding:6px 0">No entries yet. Mark an activity as done and write about your experience to start.</div>
+  </div>
 </div></dialog>
 <dialog id="mind" aria-labelledby="mindtitle"><div class="sheet">
   <button type="button" class="xclose" id="mindClose" aria-label="Close">&#10005;</button>
@@ -254,6 +282,45 @@ body.has-sel .fab{display:none}}
   <div style="text-align:center"><h2 id="plantitle" style="font:500 1.5rem/1.15 Fraunces,Georgia,serif;margin:0 0 2px;overflow-wrap:anywhere">Plan your day</h2></div>
   <div id="planstep" class="planstep"></div>
 </div></dialog>
+<dialog id="experiencePrompt" aria-labelledby="exptitle"><div class="sheet exp-prompt">
+  <button type="button" class="xclose" id="expClose" aria-label="Close">&#10005;</button>
+  <h2 id="exptitle">How was the experience?</h2>
+  <p style="margin:0;color:var(--mute)">Capture a thought, a moment, or something you learned. You can always skip this.</p>
+  <div id="expMeta" class="exp-meta"></div>
+  <div class="foot"><button class="btn" id="expSkip">Skip for now</button><button class="btn pri" id="expWrite">Write experience</button></div>
+</div></dialog>
+<dialog id="experienceEdit" aria-labelledby="exedittitle"><form id="expForm" class="sheet exp-prompt">
+  <button type="button" class="xclose" id="exeditClose" aria-label="Close">&#10005;</button>
+  <h2 id="exedittitle">Journal entry</h2>
+  <div id="exeditMeta" class="exp-meta"></div>
+  <label class="f wide"><span>Reflection</span><textarea id="expText" rows="6" placeholder="What happened? How did it feel? What would you like to remember?"></textarea></label>
+  <div class="foot"><button type="button" class="btn" id="exeditSkip">Skip for now</button><button type="submit" class="btn pri" id="exeditSave">Save experience</button></div>
+</form></dialog>
+<dialog id="diaryViewer" aria-labelledby="diaryVtitle"><div class="sheet diary-viewer">
+  <button type="button" class="xclose" id="diaryClose" aria-label="Close">&#10005;</button>
+  <div class="diary-header">
+    <h2 id="diaryVtitle" class="diary-title">Diary &amp; Experiences</h2>
+    <div class="diary-header-row">
+      <input id="diarySearch" class="diary-search" type="search" placeholder="Search by title or reflection" aria-label="Search diary">
+      <select id="diaryFilter" class="diary-filter" aria-label="Filter by activity type">
+        <option value="all">All types</option>
+        <option value="event">Event</option>
+        <option value="task">Task</option>
+        <option value="chore">Chore</option>
+        <option value="habit">Habit</option>
+      </select>
+      <span class="diary-count" id="diaryViewerCount">0 experiences</span>
+    </div>
+  </div>
+  <div class="diary-body" id="diaryBody"></div>
+</div></dialog>
+<dialog id="diaryEdit" aria-labelledby="diaryEtitle"><form id="diaryEditForm" class="sheet exp-prompt">
+  <button type="button" class="xclose" id="diaryEclose" aria-label="Close">&#10005;</button>
+  <h2 id="diaryEtitle">Edit diary entry</h2>
+  <div id="diaryEMeta" class="exp-meta"></div>
+  <label class="f wide"><span>Reflection</span><textarea id="diaryEText" rows="6" placeholder="What happened? How did it feel? What would you like to remember?"></textarea></label>
+  <div class="foot"><button type="button" class="btn danger" id="diaryEDelete">Delete entry</button><span style="flex:1"></span><button type="button" class="btn" id="diaryECancel">Cancel</button><button type="submit" class="btn pri" id="diaryESave">Save</button></div>
+</form></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -291,6 +358,15 @@ function validate(d){
   const mind=d.mind??[];if(!Array.isArray(mind))return'“mind” must be a list.';
   for(const[i,o]of mind.entries()){
     if(!o||typeof o!=='object'||typeof o.id!=='string'||typeof o.text!=='string')return`mind #${i+1} needs an id and text.`;n++}
+  const diary=d.diary??[];if(!Array.isArray(diary))return'“diary” must be a list.';
+  for(const[i,o]of diary.entries()){
+    if(!o||typeof o!=='object'||typeof o.id!=='string')return`diary #${i+1} needs an id.`;
+    if(typeof o.activityId!=='string')return`diary #${i+1} needs activityId.`;
+    if(typeof o.activityType!=='string')return`diary #${i+1} needs activityType.`;
+    if(typeof o.title!=='string')return`diary #${i+1} needs title.`;
+    if(typeof o.date!=='string'||!RD.test(o.date))return`diary #${i+1} has an invalid date.`;
+    if(o.time!==undefined&&o.time!==null&&!(typeof o.time==='string'&&RT.test(o.time)))return`diary #${i+1} has an invalid time.`;
+    if(typeof o.text!=='string')return`diary #${i+1} needs text.`;n++}
   for(const k in REQ){const a=d[k]??[];if(!Array.isArray(a))return`“${k}” must be a list.`;
     for(const[i,o]of a.entries()){
       if(!o||typeof o!=='object'||typeof o.id!=='string'||typeof o.title!=='string')return`${k} #${i+1} needs an id and a title.`;
@@ -306,6 +382,7 @@ function norm(d){return{
   chores:(d.chores||[]).map(c=>({notes:'',time:'09:00',done:false,...c,items:(c.items||[]).map(i=>({t:String(i.t??''),done:!!i.done}))})),
   habits:(d.habits||[]).map(h=>({notes:'',every:2,days:[],...h,completions:[...new Set(h.completions||[])].sort()})),
   mind:(d.mind||[]).map(m=>({created:todayStr(),...m,text:String(m.text??'').trim()})).filter(m=>m.text),
+  diary:(d.diary||[]).map(e=>({id:String(e.id),activityId:String(e.activityId),activityType:String(e.activityType),title:String(e.title),date:String(e.date),time:e.time?String(e.time):'',text:String(e.text??'').trim(),createdAt:e.createdAt||Date.now(),updatedAt:e.updatedAt||Date.now()})).filter(e=>e.text),
   settings:d.settings&&typeof d.settings==='object'?d.settings:{}}}
 function load(){try{const d=JSON.parse(localStorage.getItem(KEY));if(d&&!validate(d))return norm(d)}catch{}return norm({})}
 let db=load();
@@ -337,10 +414,58 @@ function items(ds){
   db.chores.filter(x=>x.date===ds).forEach(x=>o.push({k:'chore',id:x.id,o:x,t:tm(x.time||'09:00'),title:x.title,done:x.done}));
   db.habits.filter(h=>due(h,ds)).forEach(h=>o.push({k:'habit',id:h.id,o:h,t:tm(h.time),title:h.title,done:h.completions.includes(ds)}));
   return o.sort((a,b)=>a.t-b.t)}
-function toggle(s){const o=s.o;
-  if(s.k==='habit'){const i=o.completions.indexOf(view);i<0?o.completions.push(view):o.completions.splice(i,1);o.completions.sort()}
-  else if(s.k==='chore'){const v=!o.done;o.done=v;o.items.forEach(i=>i.done=v)}
-  else o.done=!o.done;save()}
+let journalPromptOpen=false;
+function toggle(s, opts={}){
+  const o=s.o;
+  const fromDone = s.done;
+  if(opts.force){
+    if(s.k==='habit'){const i=o.completions.indexOf(view);if(i<0)o.completions.push(view);o.completions.sort()}
+    else if(s.k==='chore'){o.done=true;o.items.forEach(i=>i.done=true)}
+    else o.done=true;
+    save();
+    return true;
+  }
+  if(s.k==='habit'){
+    const has = o.completions.includes(view);
+    if(has){
+      o.completions.splice(o.completions.indexOf(view),1);
+      o.completions.sort();
+      save();
+      return true;
+    } else {
+      if(opts.skipJournal){
+        o.completions.push(view);o.completions.sort();save();return true;
+      }
+      if(journalPromptOpen) return false;
+      journalPromptOpen=true;
+      openExperiencePrompt(s);
+      return false;
+    }
+  } else {
+    if(fromDone){
+      o.done=false;
+      save();
+      return true;
+    } else {
+      if(opts.skipJournal){
+        if(s.k==='chore'){const v=true;o.done=v;o.items.forEach(i=>i.done=v)} else o.done=true;
+        save();
+        return true;
+      }
+      if(journalPromptOpen) return false;
+      journalPromptOpen=true;
+      openExperiencePrompt(s);
+      return false;
+    }
+  }
+}
+function completeWithoutPrompt(s){
+  if(s.k==='habit'){
+    const i=s.o.completions.indexOf(view); if(i<0){s.o.completions.push(view); s.o.completions.sort();}
+  } else if(s.k==='chore'){s.o.done=true; s.o.items.forEach(i=>i.done=true)}
+  else s.o.done=true;
+  save();
+}
 function defer(t){
   const today=todayStr(),base=Math.max(tm(t.time),t.date===today?nowMin():0);
   const taken=items(t.date).filter(i=>i.id!==t.id).map(i=>i.t);
@@ -770,18 +895,39 @@ function panel(c,s){
     el('div',{class:'chip'},KIND[k]),el('h2',{class:s.done?'dn':''},s.title),
     ...lines.map(l=>el('p',{},l)),...(list?[list]:[]),
     el('div',{class:'btns'},
-      el('button',{class:'btn pri',onclick:()=>{toggle(s);render()}},s.done?'Undo':'Mark done'),
+      el('button',{class:'btn pri',onclick:()=>{
+        const existing=findDiaryFor(s);
+        if(s.done){
+          toggle(s,{skipJournal:true});
+          render();
+          return;
+        }
+        if(existing.length){
+          openDiaryForEntry(existing[existing.length-1]);
+          return;
+        }
+        toggle(s);
+        render();
+      }},s.done?'Undo':'Mark done'),
       k==='task'&&!o.done&&el('button',{class:'btn',onclick:()=>{defer(o);sel=o.date===view?sel:null;render()}},'Defer'),
       el('button',{class:'btn',onclick:()=>openForm(k,o)},'Edit'),
+      (function(){
+        const existing=findDiaryFor(s);
+        if(s.done&&existing.length) return el('button',{class:'btn',onclick:()=>openDiaryForEntry(existing[existing.length-1])},'View experience');
+        if(s.done) return el('button',{class:'btn',onclick:()=>{journalPromptOpen=true;openExperienceEdit(s)}},'Add experience');
+        if(!s.done) return el('button',{class:'btn',onclick:()=>{journalPromptOpen=true;openExperiencePrompt(s)}},'Add experience');
+        return null;
+      })(),
       el('button',{class:'btn danger',onclick:()=>remove(k,o)},'Delete')))}
 
 function render(){
   $('#today .dl').textContent=pd(view).toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   $('#today .ds').textContent=pd(view).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'});
   $('#today').setAttribute('aria-current',view===todayStr()?'date':'false');
-  const list=items(view);dial(list);center(list)}
+  const list=items(view);dial(list);center(list);
+  refreshDiaryUI()}
 function tick(){
-  setGearTransforms(localSeconds());      /* keeps reduced-motion gears accurate too */
+  setGearTransforms(serverSeconds());
   if(view!==todayStr())return;
   if(!$('.dial').contains(document.activeElement)&&!document.querySelector('dialog[open]'))return render();
   const p=$('#prog');
@@ -869,9 +1015,120 @@ function renderMindList(){
   if(!db.mind.length){list.append(el('div',{class:'mempty'},'Nothing here yet. Capture a stray thought above.'));return}
   db.mind.slice().reverse().forEach(m=>list.append(el('div',{class:'mnote'},
     el('span',{class:'mt'},m.text),el('button',{class:'x','aria-label':'Delete note',onclick:()=>delMind(m.id)},'×'))))}
+let pendingExperience=null;
+const diaryDesc = d=>{const parts=[];parts.push(d.date);if(d.time)parts.push(d.time);return parts.join(' · ')};
+function openExperiencePrompt(s){
+  pendingExperience={s};
+  const expPrompt=$('#experiencePrompt');
+  const meta=$('#expMeta');
+  meta.replaceChildren(
+    el('div',{},`Activity: ${s.title}`),
+    el('div',{},`Type: ${KIND[s.k]}`),
+    el('div',{},`Date: ${view}${s.k==='event'?' · '+fm(s.t):''}`)
+  );
+  expPrompt.showModal();
+}
+function closeExperiencePrompt(){
+  $('#experiencePrompt').close();
+  journalPromptOpen=false;
+  pendingExperience=null;
+}
+$('#expClose').onclick=closeExperiencePrompt;
+$('#experiencePrompt').addEventListener('click',e=>{if(e.target===$('#experiencePrompt'))closeExperiencePrompt()});
+$('#expSkip').onclick=()=>{
+  if(pendingExperience){
+    const s=pendingExperience.s;
+    closeExperiencePrompt();
+    completeWithoutPrompt(s);
+    render();
+    sel={k:s.k,id:s.id};
+    render();
+  } else {closeExperiencePrompt();}
+};
+$('#expWrite').onclick=()=>{
+  if(!pendingExperience)return closeExperiencePrompt();
+  const s=pendingExperience.s;
+  closeExperiencePrompt();
+  openExperienceEdit(s);
+};
+function openExperienceEdit(s, diaryEntry=null){
+  pendingExperience={s, diaryEntry};
+  const dlg=$('#experienceEdit');
+  const meta=$('#exeditMeta');
+  let title='Write experience';
+  if(diaryEntry) title='Edit experience';
+  $('#exedittitle').textContent=title;
+  meta.replaceChildren(
+    el('div',{},`Activity: ${diaryEntry?diaryEntry.title:s.title}`),
+    el('div',{},`Type: ${KIND[diaryEntry?diaryEntry.activityType:s.k]}`),
+    el('div',{},`Date: ${diaryEntry?diaryEntry.date:view}${s.k==='event'&&diaryEntry?'' : (s.k==='event'?' · '+fm(s.t):'')}`)
+  );
+  $('#expText').value=diaryEntry?diaryEntry.text:'';
+  dlg.showModal();
+  setTimeout(()=>$('#expText').focus(),50);
+}
+function closeExperienceEdit(){
+  $('#experienceEdit').close();
+  journalPromptOpen=false;
+  pendingExperience=null;
+}
+$('#exeditClose').onclick=closeExperienceEdit;
+$('#experienceEdit').addEventListener('click',e=>{if(e.target===$('#experienceEdit'))closeExperienceEdit()});
+$('#exeditSkip').onclick=()=>{
+  if(pendingExperience&&pendingExperience.s){
+    const s=pendingExperience.s;
+    closeExperienceEdit();
+    completeWithoutPrompt(s);
+    render();
+    sel={k:s.k,id:s.id};
+    render();
+  } else {closeExperienceEdit();}
+};
+$('#expForm').onsubmit=e=>{
+  e.preventDefault();
+  if(!pendingExperience)return closeExperienceEdit();
+  const s=pendingExperience.s;
+  const text=$('#expText').value.trim();
+  if(!text){
+    toast('Write something or skip.');
+    return;
+  }
+  const nowTs=Date.now();
+  const entry={
+    id:uid(),
+    activityId:s.id,
+    activityType:s.k,
+    title:s.title,
+    date:view,
+    time:(s.k==='event'?fm(s.t): (s.o.time?String(s.o.time):'')),
+    text:text,
+    createdAt:nowTs,
+    updatedAt:nowTs
+  };
+  db.diary.push(entry);
+  save();
+  closeExperienceEdit();
+  completeWithoutPrompt(s);
+  render();
+  sel={k:s.k,id:s.id};
+  render();
+  toast('Experience saved');
+};
+function findDiaryFor(s){
+  return db.diary.filter(d=>d.activityId===s.id&&d.activityType===s.k&&d.date===view).sort((a,b)=>a.createdAt-b.createdAt);
+}
+function refreshDiaryUI(){
+  const count=db.diary.length;
+  $('#diaryCount').textContent=count===1?`${count} experience saved.`:`${count} experiences saved.`;
+  $('#diaryViewerCount').textContent=count===1?`${count} experience`:`${count} experiences`;
+  $('#diaryEmpty').hidden=count!==0;
+  const expBtn=$('#exportDiaryMd');
+  if(expBtn) expBtn.disabled=count===0;
+}
 function refreshMind(){
   const n=db.mind.length;mindCnt.textContent=n>9?'9+':n;mindCnt.hidden=n===0;
-  if($('#mind').open)renderMindList()}
+  if($('#mind').open)renderMindList()
+  refreshDiaryUI()}
 function openMind(){if(!$('#mind').open)$('#mind').showModal();renderMindList();$('#mindIn').value='';$('#mindIn').focus()}
 function addMind(){
   const t=$('#mindIn').value.trim();if(!t)return;
@@ -884,6 +1141,172 @@ $('#mindClose').onclick=()=>$('#mind').close();
 $('#mindClear').onclick=()=>{if(!db.mind.length)return;if(confirm(`Delete all ${pl(db.mind.length,'note')}?`)){db.mind=[];save();refreshMind();render()}};
 $('#mindPlan').onclick=()=>{$('#mind').close();openPlanner()};
 $('#mind').addEventListener('click',e=>{if(e.target===$('#mind'))$('#mind').close()});
+
+function openDiaryForEntry(entry){
+  openDiaryViewer();
+  const search=$('#diarySearch');
+  if(search) search.value=entry.title||'';
+  applyDiaryFilters();
+  const cards=document.querySelectorAll('#diaryBody .diary-card');
+  if(cards.length){
+    cards[0].scrollIntoView({block:'start',behavior:'smooth'});
+  }
+}
+function getDiaryEntries(){
+  return db.diary.slice().sort((a,b)=>{
+    if(a.date!==b.date) return a.date>b.date?-1:1;
+    if(a.createdAt!==b.createdAt) return (b.createdAt||0)-(a.createdAt||0);
+    return 0;
+  });
+}
+function formatDateHuman(s){
+  const d=pd(s);
+  const today=todayStr(),yest=addD(today,-1);
+  if(s===today) return 'Today';
+  if(s===yest) return 'Yesterday';
+  return d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+function openDiaryViewer(){
+  applyDiaryFilters();
+  $('#diaryViewer').showModal();
+}
+function closeDiaryViewer(){
+  $('#diaryViewer').close();
+}
+$('#viewDiary').onclick=openDiaryViewer;
+$('#diaryClose').onclick=closeDiaryViewer;
+$('#diaryViewer').addEventListener('click',e=>{if(e.target===$('#diaryViewer'))closeDiaryViewer()});
+$('#diarySearch').oninput=applyDiaryFilters;
+$('#diaryFilter').onchange=applyDiaryFilters;
+let editingDiaryEntry=null;
+function applyDiaryFilters(){
+  const body=$('#diaryBody');
+  body.replaceChildren();
+  const q=($('#diarySearch').value||'').toLowerCase().trim();
+  const ft=$('#diaryFilter').value;
+  const entries=getDiaryEntries();
+  let filtered=entries.filter(e=>{
+    if(ft!=='all'&&e.activityType!==ft) return false;
+    if(!q) return true;
+    return e.title.toLowerCase().includes(q)||e.text.toLowerCase().includes(q);
+  });
+  if(filtered.length===0){
+    body.append(el('div',{class:'mempty'},q?'No entries match your search.':'No experiences yet.'));
+    return;
+  }
+  let last='';
+  filtered.forEach(e=>{
+    const dh=formatDateHuman(e.date);
+    if(dh!==last){
+      last=dh;
+      body.append(el('div',{class:'diary-date-head'},dh));
+    }
+    const card=el('div',{class:'diary-card'});
+    const meta=el('div',{class:'diary-meta'});
+    meta.append(el('span',{class:'diary-type'},KIND[e.activityType]||e.activityType));
+    meta.append(el('span',{},e.title));
+    const ds=[e.date];
+    if(e.time) ds.push(e.time);
+    meta.append(el('span',{},ds.join(' · ')));
+    meta.append(el('span',{},'Completed'));
+    card.append(meta);
+    const txt=el('div',{class:'diary-text'},e.text);
+    card.append(txt);
+    const acts=el('div',{class:'diary-actions'});
+    acts.append(el('button',{class:'btn',onclick:()=>editDiaryEntry(e)},'Edit'));
+    acts.append(el('button',{class:'btn danger',onclick:()=>deleteDiaryEntry(e)},'Delete'));
+    card.append(acts);
+    body.append(card);
+  });
+}
+function editDiaryEntry(e){
+  editingDiaryEntry=e;
+  $('#diaryEtitle').textContent='Edit diary entry';
+  const meta=$('#diaryEMeta');
+  meta.replaceChildren(
+    el('div',{},`Activity: ${e.title}`),
+    el('div',{},`Type: ${KIND[e.activityType]||e.activityType}`),
+    el('div',{},`Date: ${e.date}${e.time?' · '+e.time:''}`)
+  );
+  $('#diaryEText').value=e.text;
+  $('#diaryEdit').showModal();
+  setTimeout(()=>$('#diaryEText').focus(),50);
+}
+function closeDiaryEdit(){
+  $('#diaryEdit').close();
+  editingDiaryEntry=null;
+}
+$('#diaryEclose').onclick=closeDiaryEdit;
+$('#diaryECancel').onclick=closeDiaryEdit;
+$('#diaryEdit').addEventListener('click',e=>{if(e.target===$('#diaryEdit'))closeDiaryEdit()});
+$('#diaryEditForm').onsubmit=ev=>{
+  ev.preventDefault();
+  if(!editingDiaryEntry) return closeDiaryEdit();
+  const txt=$('#diaryEText').value.trim();
+  if(!txt){ toast('Reflection cannot be empty. Delete the entry instead.'); return; }
+  editingDiaryEntry.text=txt;
+  editingDiaryEntry.updatedAt=Date.now();
+  save();
+  closeDiaryEdit();
+  applyDiaryFilters();
+  render();
+  toast('Diary entry updated');
+};
+$('#diaryEDelete').onclick=()=>{
+  if(!editingDiaryEntry) return closeDiaryEdit();
+  const e=editingDiaryEntry;
+  if(confirm(`Delete this diary entry for “${e.title}”?`)){
+    db.diary=db.diary.filter(x=>x.id!==e.id);
+    save();
+    closeDiaryEdit();
+    applyDiaryFilters();
+    render();
+    toast('Diary entry deleted');
+  }
+};
+function deleteDiaryEntry(e){
+  if(confirm(`Delete this diary entry for “${e.title}”?`)){
+    db.diary=db.diary.filter(x=>x.id!==e.id);
+    save();
+    applyDiaryFilters();
+    render();
+    toast('Diary entry deleted');
+  }
+}
+function escapeMd(s){
+  if(s==null) return '';
+  return String(s).replace(/([\\`*_{}\[\]()#+\-.!|])/g,'\\$1');
+}
+function exportDiaryMarkdown(){
+  const entries=getDiaryEntries();
+  if(entries.length===0){ toast('No experiences to export.'); return; }
+  const now=new Date();
+  const fn=`time-dial-diary-${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}.md`;
+  let md=['# My Time Dial Diary','', 'A collection of experiences, reflections, and moments worth remembering.', '', `Total experiences: ${entries.length}`, ''];
+  let last='';
+  entries.forEach(e=>{
+    const dh=pd(e.date).toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    if(dh!==last){
+      last=dh;
+      md.push('---','', dh, '');
+    }
+    md.push(`## ${escapeMd(e.title)}`, '');
+    const meta=[];
+    meta.push(`- Type: ${escapeMd(KIND[e.activityType]||e.activityType)}`);
+    if(e.time) meta.push(`- Scheduled: ${escapeMd(e.time)}`);
+    meta.push(`- Completed: Yes`);
+    md.push(...meta, '');
+    const text=e.text.replace(/\r\n/g,'\n');
+    text.split('\n').forEach(l=>md.push(l||''));
+    md.push('');
+  });
+  const blob=new Blob([md.join('\n')],{type:'text/markdown'});
+  const a=el('a',{href:URL.createObjectURL(blob),download:fn});
+  document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  toast('Diary exported');
+}
+$('#exportDiaryMd').onclick=exportDiaryMarkdown;
 
 /* ============ Plan my day (turn notes into scheduled items) ============ */
 let planQue=[],planI=0;
@@ -924,8 +1347,8 @@ $('#imp').onchange=async e=>{
   try{const d=JSON.parse(await f.text()),err=validate(d);
     if(err){m.replaceChildren(el('p',{style:'color:#A5271B;margin:0'},'Import stopped: '+err));return}
     pending=norm(d);
-    const n=[...Object.keys(COL).map(k=>[pending[COL[k]].length,k]),[pending.mind.length,'note']]
-      .filter(([c])=>c>0).map(([c,w])=>pl(c,w)).join(', ')||'nothing';
+    const parts=[...Object.keys(COL).map(k=>[pending[COL[k]].length,k]),[pending.mind.length,'note'],[pending.diary.length,'diary entry']];
+    const n=parts.filter(([c])=>c>0).map(([c,w])=>pl(c,w)).join(', ')||'nothing';
     m.replaceChildren(el('p',{style:'margin:0 0 8px'},`Found ${n}. How should it be imported?`),
       el('div',{class:'foot'},
         el('button',{class:'btn',onclick:()=>{m.replaceChildren();pending=null}},'Cancel'),
@@ -935,6 +1358,7 @@ $('#imp').onchange=async e=>{
 function finish(merge){
   if(merge){for(const k of Object.values(COL)){const map=new Map(db[k].map(x=>[x.id,x]));pending[k].forEach(x=>map.set(x.id,x));db[k]=[...map.values()]}
     db.mind=[...new Map([...db.mind,...pending.mind].map(x=>[x.id,x])).values()].sort((a,b)=>(a.created<b.created?-1:a.created>b.created?1:0));
+    db.diary=[...new Map([...db.diary,...pending.diary].map(x=>[x.id,x])).values()].sort((a,b)=>(a.date<b.date?-1:a.date>b.date?1:(a.createdAt||0)-(b.createdAt||0)));
     db.settings={...db.settings,...pending.settings}}
   else db=pending;
   pending=null;save();sel=null;ddlg.close();render();toast(merge?'Merged imported data':'Imported data')}
@@ -952,7 +1376,7 @@ function finish(merge){
 /* ==SYNC-CORE-BEGIN== */
 const SyncCore=(function(){
 'use strict';
-const COLS=['events','tasks','chores','habits','mind'];
+const COLS=['events','tasks','chores','habits','mind','diary'];
 const SECRET=/ya29\.[\w.-]+|Bearer\s+[\w.~+\/=-]+|(?:access_token|refresh_token|client_secret|id_token)=[^&\s"']+|"(?:access_token|refresh_token|client_secret|id_token)"\s*:\s*"[^"]*"/gi;
 const scrub=s=>String(s==null?'':s).replace(SECRET,'[redacted]');
 
@@ -1327,7 +1751,7 @@ syncEngine=SyncCore.createSyncEngine({
   saveMeta:m=>{lsSet(SYNCK,JSON.stringify(m));if(!legacyCleared){legacyCleared=true;lsDel(LEGACY_DRV);lsDel(LEGACY_CHG)}},
   loadBase:()=>lsGet(BASEK),saveBase:s=>s==null?lsDel(BASEK):lsSet(BASEK,s),
   backup:(which,obj)=>lsSet(which==='local'?KEY+'.backup':CONFK,JSON.stringify(obj)),
-  applyLocal:obj=>{db=norm(obj);persist();sel=null;refreshMind();render()},   /* persist(), never save(): no upload trigger */
+  applyLocal:obj=>{db=norm(obj);persist();sel=null;refreshMind();refreshDiaryUI();render()},   /* persist(), never save(): no upload trigger */
   onState:()=>driveUI(),
   onEvent:e=>toast(e.type==='merged'?'Merged changes from another device':'Loaded newer copy from Drive')});
 
