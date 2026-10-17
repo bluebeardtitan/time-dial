@@ -36,8 +36,10 @@ function sandboxWithGears() {
     C: 300,
     Date: FakeDate,
     document: { createElementNS: (ns, t) => new N(t), createElement: t => new N(t), visibilityState: 'visible',
-      getElementById: () => null, addEventListener: (t, f) => { (docL[t] = docL[t] || []).push(f); } },
+      getElementById: () => null, addEventListener: (t, f) => { (docL[t] = docL[t] || []).push(f); }, body: {},
+      querySelector: sel => (sb.__dialogOpen && sel === 'dialog[open]') ? {} : null },
     window: { addEventListener: (t, f) => { (winL[t] = winL[t] || []).push(f); } },
+    MutationObserver: class { constructor(cb) { sb.__observerCb = cb; } observe() {} },
     matchMedia: () => ({ matches: false, addEventListener() {} }),
     requestAnimationFrame: f => { const id = ++seq; raf.set(id, f); return id; },
     cancelAnimationFrame: id => { raf.delete(id); },
@@ -53,6 +55,9 @@ function sandboxWithGears() {
   vm.createContext(sb);
   vm.runInContext(gearSrc, sb, { filename: 'gear-core.js' });
   sb.__raf = raf;
+  sb.__dialogOpen = false;
+  sb.__setDialogOpen = v => { sb.__dialogOpen = !!v; };
+  sb.__mutate = () => { if (sb.__observerCb) sb.__observerCb(); };
   sb.__fire = (t, visible) => { if (t === 'visibilitychange') sb.document.visibilityState = visible ? 'visible' : 'hidden'; (docL[t] || []).forEach(f => f()); (winL[t] || []).forEach(f => f()); };
   sb.__pump = () => { const cbs = [...raf.values()]; raf.clear(); cbs.forEach(f => f()); };
   sb.__setNow = ms => { fakeNow = ms; };
@@ -179,6 +184,16 @@ test('exactly one animation loop survives repeated focus/visibility changes', ()
   sb.__fire('visibilitychange', true);
   sb.__fire('focus', true); sb.__fire('pageshow', true);
   assert.equal(sb.__raf.size, 1, 'resume schedules exactly one loop');
+});
+
+test('a modal dialog freezes the train so it cannot compete with typing; closing it resumes one loop', () => {
+  assert.equal(sb.__raf.size, 1, 'animating while the dial is visible');
+  sb.__setDialogOpen(true); sb.__mutate();
+  assert.equal(sb.__raf.size, 0, 'an open dialog covers the dial, so the wheels freeze');
+  sb.__fire('focus', true);
+  assert.equal(sb.__raf.size, 0, 'regaining focus must not restart the wheels behind the dialog');
+  sb.__setDialogOpen(false); sb.__mutate();
+  assert.equal(sb.__raf.size, 1, 'closing the last dialog resumes exactly one loop');
 });
 
 test('the loop follows the wall clock across frames and a long sleep, without drift', () => {
