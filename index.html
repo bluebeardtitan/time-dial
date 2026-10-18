@@ -189,6 +189,9 @@ fieldset.days{border:1px solid var(--line);border-radius:12px;display:flex;flex-
 .diary-section{display:grid;gap:10px;border:1px solid var(--line-soft);border-radius:16px;padding:12px;background:rgba(255,255,255,.7)}
 .diary-count{color:var(--mute);font-size:.9rem}
 .diary-desc{margin:0;color:var(--mute);font-size:.9rem}
+#diarySection{display:grid;gap:12px}
+.diary-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.diary-tally{display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .5em;border-radius:999px;background:var(--ink);color:#fff;font-size:.78rem;font-weight:700;font-variant-numeric:tabular-nums}
 .diary-viewer{width:min(760px,calc(100vw - 24px));max-height:calc(100dvh - 40px);display:flex;flex-direction:column}
 .diary-header{display:flex;flex-direction:column;gap:8px;padding:22px 22px 12px}
 .diary-header-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -263,9 +266,8 @@ body.has-sel .fab{display:none}}
   </div>
   <hr class="sep">
   <div id="diarySection">
-    <h3>Diary &amp; Experiences</h3>
+    <div class="diary-head"><h3>Diary &amp; Experiences</h3><span class="diary-tally" id="diaryCount" aria-label="0 experiences saved">0</span></div>
     <p class="diary-desc">A collection of moments, reflections, and experiences from your days.</p>
-    <div class="diary-count" id="diaryCount">0 experiences saved.</div>
     <div class="foot" style="justify-content:flex-start"><button class="btn pri" id="viewDiary">View diary</button><button class="btn" id="exportDiaryMd">Export diary (.md)</button></div>
     <div id="diaryEmpty" class="mempty" style="text-align:left;padding:6px 0">No entries yet. Mark an activity as done and write about your experience to start.</div>
   </div>
@@ -1128,7 +1130,9 @@ function findDiaryFor(s){
 }
 function refreshDiaryUI(){
   const count=db.diary.length;
-  $('#diaryCount').textContent=count===1?`${count} experience saved.`:`${count} experiences saved.`;
+  const tally=$('#diaryCount');
+  tally.textContent=count;
+  tally.setAttribute('aria-label',`${pl(count,'experience')} saved`);
   $('#diaryViewerCount').textContent=count===1?`${count} experience`:`${count} experiences`;
   $('#diaryEmpty').hidden=count!==0;
   const expBtn=$('#exportDiaryMd');
