@@ -5,7 +5,7 @@
  * Bump VERSION whenever you deploy changed files so returning
  * visitors pick up the new app shell.
  */
-const VERSION = 'v3';
+const VERSION = 'v4';
 
 const SHELL_CACHE   = `time-dial-shell-${VERSION}`;
 const RUNTIME_CACHE = `time-dial-runtime-${VERSION}`;

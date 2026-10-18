@@ -187,12 +187,17 @@ fieldset.days{border:1px solid var(--line);border-radius:12px;display:flex;flex-
 .mempty{color:var(--mute);text-align:center;padding:.4em}
 /* Diary */
 .diary-section{display:grid;gap:10px;border:1px solid var(--line-soft);border-radius:16px;padding:12px;background:rgba(255,255,255,.7)}
-.diary-count{color:var(--mute);font-size:.9rem}
 .diary-desc{margin:0;color:var(--mute);font-size:.9rem}
 #diarySection{display:grid;gap:12px}
 .diary-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .diary-tally{display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .5em;border-radius:999px;background:var(--ink);color:#fff;font-size:.78rem;font-weight:700;font-variant-numeric:tabular-nums}
-.diary-viewer{width:min(760px,calc(100vw - 24px));max-height:calc(100dvh - 40px);display:flex;flex-direction:column}
+/* the viewer's title is larger, so its tally scales up with the type */
+#diaryViewerCount{font-size:.85rem}
+/* Sizing belongs on the <dialog>: a width on the inner .sheet overhangs the
+   dialog's own (520px) box, which pushes the panel off-centre and lets it get
+   clipped off-screen, and strands the close button mid-panel. */
+#diaryViewer{width:min(760px,calc(100vw - 24px));max-height:calc(100dvh - 40px)}
+.diary-viewer{max-height:calc(100dvh - 40px);display:flex;flex-direction:column}
 .diary-header{display:flex;flex-direction:column;gap:8px;padding:22px 22px 12px}
 .diary-header-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .diary-title{margin:0;font:500 1.6rem Fraunces,Georgia,serif}
@@ -301,7 +306,7 @@ body.has-sel .fab{display:none}}
 <dialog id="diaryViewer" aria-labelledby="diaryVtitle"><div class="sheet diary-viewer">
   <button type="button" class="xclose" id="diaryClose" aria-label="Close">&#10005;</button>
   <div class="diary-header">
-    <h2 id="diaryVtitle" class="diary-title">Diary &amp; Experiences</h2>
+    <div class="diary-head"><h2 id="diaryVtitle" class="diary-title">Diary &amp; Experiences</h2><span class="diary-tally" id="diaryViewerCount" aria-label="0 experiences">0</span></div>
     <div class="diary-header-row">
       <input id="diarySearch" class="diary-search" type="search" placeholder="Search by title or reflection" aria-label="Search diary">
       <select id="diaryFilter" class="diary-filter" aria-label="Filter by activity type">
@@ -311,7 +316,6 @@ body.has-sel .fab{display:none}}
         <option value="chore">Chore</option>
         <option value="habit">Habit</option>
       </select>
-      <span class="diary-count" id="diaryViewerCount">0 experiences</span>
     </div>
   </div>
   <div class="diary-body" id="diaryBody"></div>
@@ -1133,7 +1137,9 @@ function refreshDiaryUI(){
   const tally=$('#diaryCount');
   tally.textContent=count;
   tally.setAttribute('aria-label',`${pl(count,'experience')} saved`);
-  $('#diaryViewerCount').textContent=count===1?`${count} experience`:`${count} experiences`;
+  const vTally=$('#diaryViewerCount');
+  vTally.textContent=count;
+  vTally.setAttribute('aria-label',pl(count,'experience'));
   $('#diaryEmpty').hidden=count!==0;
   const expBtn=$('#exportDiaryMd');
   if(expBtn) expBtn.disabled=count===0;
